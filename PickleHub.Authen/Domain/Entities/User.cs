@@ -1,4 +1,4 @@
-﻿using PickleHub.Authen.Domain.Enums;
+using PickleHub.Authen.Domain.Enums;
 using PickleHub.Common.Domain;
 
 namespace PickleHub.Authen.Domain.Entities
