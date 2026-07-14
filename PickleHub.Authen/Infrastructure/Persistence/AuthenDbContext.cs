@@ -1,9 +1,10 @@
 ﻿using Microsoft.EntityFrameworkCore;
 using PickleHub.Authen.Domain.Entities;
+using PickleHub.Authen.Domain.Interfaces.Repositories;
 
 namespace PickleHub.Authen.Infrastructure.Persistence
 {
-    public class AuthenDbContext : DbContext
+    public class AuthenDbContext : DbContext, IUnitOfWork
     {
         public AuthenDbContext(DbContextOptions<AuthenDbContext> options) : base(options) { }
         public DbSet<User> Users => Set<User>();
@@ -22,6 +23,8 @@ namespace PickleHub.Authen.Infrastructure.Persistence
                 e.Property(u => u.IsBlocked).HasDefaultValue(false);
                 e.Property(u => u.CreatedAt).HasColumnName("created_at");
                 e.Property(u => u.UpdatedAt).HasColumnName("updated_at");
+                e.Navigation(u => u.RefreshTokens).HasField("_refreshTokens");
+                e.Navigation(u => u.PasswordResetTokens).HasField("_passwordResetTokens");
             });
 
             modelBuilder.Entity<RefreshToken>(e =>

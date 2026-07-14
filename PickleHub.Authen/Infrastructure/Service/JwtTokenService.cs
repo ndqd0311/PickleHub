@@ -25,7 +25,7 @@ namespace PickleHub.Authen.Infrastructure.Service
 
             var claims = new[]
             {
-                new Claim("sub", user.Id.ToString()),
+                new Claim(ClaimTypes.NameIdentifier, user.Id.ToString()),
                 new Claim(ClaimTypes.Email, user.Email),
                 new Claim(ClaimTypes.Role, user.Role.ToString())
             };

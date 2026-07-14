@@ -1,6 +1,14 @@
 ﻿using MediatR;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
-using PickleHub.Authen.Application.Commands;
+using PickleHub.Authen.Application.Features.Auth.BlockUser;
+using PickleHub.Authen.Application.Features.Auth.ChangePassword;
+using PickleHub.Authen.Application.Features.Auth.ForgotPassword;
+using PickleHub.Authen.Application.Features.Auth.Login;
+using PickleHub.Authen.Application.Features.Auth.Logout;
+using PickleHub.Authen.Application.Features.Auth.RefreshTokens;
+using PickleHub.Authen.Application.Features.Auth.Register;
+using PickleHub.Authen.Application.Features.Auth.ResetPassword;
 using PickleHub.Common.Exceptions;
 
 namespace PickleHub.Authen.Controllers
@@ -30,6 +38,7 @@ namespace PickleHub.Authen.Controllers
             return Ok(result);
         }
 
+        [Authorize]
         [HttpPost("logout")]
         public async Task<IActionResult> Logout([FromBody] LogoutCommand command, CancellationToken ct)
         {
@@ -53,27 +62,21 @@ namespace PickleHub.Authen.Controllers
 
         // Admin only — gọi từ Gateway sau khi đã validate JWT + role
         [HttpPatch("users/{userId:guid}/block")]
+        [Authorize(Roles = "Admin")]
         public async Task<IActionResult> BlockUser(Guid userId, [FromBody] BlockUserCommand command, CancellationToken ct)
         {
-            await mediator.Send(new BlockUserCommand(userId, command.IsBlocked), ct);
+            await mediator.Send(command with { UserId = userId}, ct);
             return NoContent();
         }
 
+        [Authorize]
         [HttpPatch("change-password")]
         public async Task<IActionResult> ChangePassword(
-                    [FromBody] ChangePasswordRequest command, CancellationToken ct)
-        {
-            // Gateway đã validate JWT và forward X-User-Id
-            var userIdHeader = HttpContext.Request.Headers["X-User-Id"].FirstOrDefault();
-
-            if (string.IsNullOrEmpty(userIdHeader) || !Guid.TryParse(userIdHeader, out var userId))
-                throw new UnauthorizedException("Không xác định được người dùng.");
-
-            await mediator.Send(new ChangePasswordCommand(userId, command.OldPassword, command.NewPassword), ct);
+                    [FromBody] ChangePasswordCommand command, CancellationToken ct)
+        {       
+            await mediator.Send(command, ct);
             return NoContent();
         }
-
-        public record ChangePasswordRequest(string OldPassword, string NewPassword);
 
     }
 
