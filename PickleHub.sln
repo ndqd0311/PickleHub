@@ -7,7 +7,11 @@ Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "PickleHub.Catalog", "Pickle
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "PickleHub.Common", "PickleHub.Common\PickleHub.Common.csproj", "{AB4F1F59-E447-43B1-BCD7-B2057731BA26}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "PickleHub.Authen", "PickleHub.Authen\PickleHub.Authen.csproj", "{218A0D5F-EBE2-4CE9-8B1D-B4F8F6049E7D}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "PickleHub.Authen", "PickleHub.Authen\PickleHub.Authen.csproj", "{218A0D5F-EBE2-4CE9-8B1D-B4F8F6049E7D}"
+EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Services", "Services", "{6E78F9DE-185F-4921-817D-98FA9072D350}"
+EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Shared", "Shared", "{B49499DC-E97D-4089-AE4A-4BD3A5C5B6C3}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -30,6 +34,11 @@ Global
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
+	EndGlobalSection
+	GlobalSection(NestedProjects) = preSolution
+		{DE5693F6-BF86-4F53-ADAA-0FD2EC7234E1} = {6E78F9DE-185F-4921-817D-98FA9072D350}
+		{AB4F1F59-E447-43B1-BCD7-B2057731BA26} = {B49499DC-E97D-4089-AE4A-4BD3A5C5B6C3}
+		{218A0D5F-EBE2-4CE9-8B1D-B4F8F6049E7D} = {6E78F9DE-185F-4921-817D-98FA9072D350}
 	EndGlobalSection
 	GlobalSection(ExtensibilityGlobals) = postSolution
 		SolutionGuid = {69902100-7374-403B-B6AE-7C4E9CECB106}

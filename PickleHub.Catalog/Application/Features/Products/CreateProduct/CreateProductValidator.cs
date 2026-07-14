@@ -8,16 +8,19 @@ namespace PickleHub.Catalog.Application.Features.Products.CreateProduct
         {
             RuleFor(x => x.Name)
                 .NotEmpty().WithMessage("Tên sản phẩm không được để trống.")
-                .MaximumLength(100).WithMessage("Tên sản phẩm tối đa 100 kí tự.");
+                .MaximumLength(300).WithMessage("Tên sản phẩm không được vượt quá 300 ký tự.");
 
-            RuleFor(x => x.BasePrice)
-                .GreaterThan(0).WithMessage("Giá sản phẩm phải lớn hơn ).");
-
-            RuleFor(x => x.BrandId)
-                .NotEmpty().WithMessage("Phải chọn thương hiệu.");
+            //RuleFor(x => x.Description)
+            //    .NotEmpty().WithMessage("Mô tả sản phẩm không được để trống.");
 
             RuleFor(x => x.CategoryId)
-                .NotEmpty().WithMessage("Phải chọn danh mục.");
+                .NotEmpty().WithMessage("Danh mục sản phẩm không được để trống.");
+
+            RuleFor(x => x.BrandId)
+                .NotEmpty().WithMessage("Thương hiệu sản phẩm không được để trống.");
+
+            RuleFor(x => x.BasePrice)
+                .GreaterThan(0).WithMessage("Giá sản phẩm phải lớn hơn 0.");
         }
     }
 }

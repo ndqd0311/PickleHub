@@ -16,7 +16,9 @@ namespace PickleHub.Catalog.Migrations
                 columns: table => new
                 {
                     Id = table.Column<Guid>(type: "uuid", nullable: false),
-                    Name = table.Column<string>(type: "character varying(200)", maxLength: 200, nullable: false)
+                    Name = table.Column<string>(type: "character varying(200)", maxLength: 200, nullable: false),
+                    created_at = table.Column<DateTime>(type: "timestamp with time zone", nullable: false),
+                    updated_at = table.Column<DateTime>(type: "timestamp with time zone", nullable: true)
                 },
                 constraints: table =>
                 {
@@ -29,7 +31,10 @@ namespace PickleHub.Catalog.Migrations
                 {
                     Id = table.Column<Guid>(type: "uuid", nullable: false),
                     Name = table.Column<string>(type: "character varying(200)", maxLength: 200, nullable: false),
-                    ParentId = table.Column<Guid>(type: "uuid", nullable: true)
+                    slug = table.Column<string>(type: "character varying(300)", maxLength: 300, nullable: false),
+                    ParentId = table.Column<Guid>(type: "uuid", nullable: true),
+                    created_at = table.Column<DateTime>(type: "timestamp with time zone", nullable: false),
+                    updated_at = table.Column<DateTime>(type: "timestamp with time zone", nullable: true)
                 },
                 constraints: table =>
                 {
@@ -50,10 +55,14 @@ namespace PickleHub.Catalog.Migrations
                     CategoryId = table.Column<Guid>(type: "uuid", nullable: false),
                     BrandId = table.Column<Guid>(type: "uuid", nullable: false),
                     Name = table.Column<string>(type: "character varying(300)", maxLength: 300, nullable: false),
+                    slug = table.Column<string>(type: "character varying(300)", maxLength: 300, nullable: false),
                     Description = table.Column<string>(type: "text", nullable: false),
                     BasePrice = table.Column<decimal>(type: "numeric(12,2)", nullable: false),
                     Status = table.Column<string>(type: "character varying(20)", maxLength: 20, nullable: false),
-                    specs = table.Column<string>(type: "jsonb", nullable: false)
+                    specs = table.Column<string>(type: "jsonb", nullable: false),
+                    sold_count = table.Column<int>(type: "integer", nullable: false, defaultValue: 0),
+                    created_at = table.Column<DateTime>(type: "timestamp with time zone", nullable: false),
+                    updated_at = table.Column<DateTime>(type: "timestamp with time zone", nullable: true)
                 },
                 constraints: table =>
                 {
@@ -79,8 +88,12 @@ namespace PickleHub.Catalog.Migrations
                     Id = table.Column<Guid>(type: "uuid", nullable: false),
                     ProductId = table.Column<Guid>(type: "uuid", nullable: false),
                     VariantId = table.Column<Guid>(type: "uuid", nullable: true),
+                    public_id = table.Column<string>(type: "character varying(500)", maxLength: 500, nullable: false),
                     Url = table.Column<string>(type: "text", nullable: false),
-                    SortOrder = table.Column<int>(type: "integer", nullable: false)
+                    SortOrder = table.Column<int>(type: "integer", nullable: false),
+                    is_size_chart = table.Column<bool>(type: "boolean", nullable: false, defaultValue: false),
+                    created_at = table.Column<DateTime>(type: "timestamp with time zone", nullable: false),
+                    updated_at = table.Column<DateTime>(type: "timestamp with time zone", nullable: true)
                 },
                 constraints: table =>
                 {
@@ -101,7 +114,9 @@ namespace PickleHub.Catalog.Migrations
                     ProductId = table.Column<Guid>(type: "uuid", nullable: false),
                     Sku = table.Column<string>(type: "character varying(100)", maxLength: 100, nullable: false),
                     attributes = table.Column<string>(type: "jsonb", nullable: false),
-                    Price = table.Column<decimal>(type: "numeric(12,2)", nullable: false)
+                    Price = table.Column<decimal>(type: "numeric(12,2)", nullable: false),
+                    created_at = table.Column<DateTime>(type: "timestamp with time zone", nullable: false),
+                    updated_at = table.Column<DateTime>(type: "timestamp with time zone", nullable: true)
                 },
                 constraints: table =>
                 {
@@ -120,6 +135,12 @@ namespace PickleHub.Catalog.Migrations
                 column: "ParentId");
 
             migrationBuilder.CreateIndex(
+                name: "IX_category_slug",
+                table: "category",
+                column: "slug",
+                unique: true);
+
+            migrationBuilder.CreateIndex(
                 name: "IX_product_BrandId",
                 table: "product",
                 column: "BrandId");
@@ -128,6 +149,12 @@ namespace PickleHub.Catalog.Migrations
                 name: "IX_product_CategoryId",
                 table: "product",
                 column: "CategoryId");
+
+            migrationBuilder.CreateIndex(
+                name: "IX_product_slug",
+                table: "product",
+                column: "slug",
+                unique: true);
 
             migrationBuilder.CreateIndex(
                 name: "IX_product_image_ProductId",

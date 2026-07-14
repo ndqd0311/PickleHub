@@ -1,36 +1,34 @@
 ﻿using MediatR;
-using Microsoft.EntityFrameworkCore;
 using PickleHub.Catalog.Application.Features.Brands.DTOs;
-using PickleHub.Catalog.Infrastructure.Persistence;
+using PickleHub.Catalog.Domain.Repositories;
 using PickleHub.Common.Exceptions;
 
 namespace PickleHub.Catalog.Application.Features.Brands.UpdateBrand
 {
     public record UpdateBrandCommand(Guid Id, string Name) : IRequest<BrandDto>;
-
     public class UpdateBrandHandler : IRequestHandler<UpdateBrandCommand, BrandDto>
     {
-        private readonly CatalogDbContext _db;
-
-        public UpdateBrandHandler(CatalogDbContext db)
+        private readonly IBrandRepository _brandRepository;
+        private readonly IUnitOfWork _unitOfWork;
+        public UpdateBrandHandler(IBrandRepository brandRepository, IUnitOfWork unitOfWork)
         {
-            _db = db;
+            _brandRepository = brandRepository;
+            _unitOfWork = unitOfWork;
         }
-
         public async Task<BrandDto> Handle(UpdateBrandCommand request, CancellationToken ct)
         {
-            var brand = await _db.Brands.FirstOrDefaultAsync(b => b.Id == request.Id, ct);
+            var brand = await _brandRepository.GetByIdAsync(request.Id, ct)
+                ?? throw new NotFoundException($"Không tìm thấy thương hiệu với Id: {request.Id}");
 
-            if (brand == null)
+            brand.Update(request.Name);
+            _brandRepository.Update(brand);
+            await _unitOfWork.SaveChangesAsync(ct);
+
+            return new BrandDto
             {
-                throw new NotFoundException("Thương hiệu không tồn tại.");
-            }
-
-            brand.Name = request.Name;
-            brand.UpdatedAt = DateTime.UtcNow;
-            await _db.SaveChangesAsync(ct);
-
-            return new BrandDto { Id = brand.Id, Name = brand.Name };
+                Id = request.Id,
+                Name = request.Name
+            };
         }
     }
 }

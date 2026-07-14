@@ -10,19 +10,12 @@ namespace PickleHub.Catalog.Controllers
 {
     [ApiController]
     [Route("categories")]
-    public class CategoriesController : ControllerBase
+    public class CategoriesController(ISender mediator) : ControllerBase
     {
-        private readonly IMediator _mediator;
-
-        public CategoriesController(IMediator mediator)
-        {
-            _mediator = mediator;
-        }
-
         [HttpGet]
         public async Task<IActionResult> GetAll([FromQuery] GetCategoriesQuery query, CancellationToken ct)
         {
-            var result = await _mediator.Send(query, ct);
+            var result = await mediator.Send(query, ct);
             return Ok(result);
         }
 
@@ -30,7 +23,7 @@ namespace PickleHub.Catalog.Controllers
         [Authorize(Roles = "Admin")]
         public async Task<IActionResult> Create([FromBody] CreateCategoryCommand command, CancellationToken ct)
         {
-            var result = await _mediator.Send(command, ct);
+            var result = await mediator.Send(command, ct);
             return CreatedAtAction(nameof(GetAll), result);
         }
 
@@ -38,7 +31,7 @@ namespace PickleHub.Catalog.Controllers
         [Authorize(Roles = "Admin")]
         public async Task<IActionResult> Update(Guid id, [FromBody] UpdateCategoryCommand command, CancellationToken ct)
         {
-            var result = await _mediator.Send(command with { Id=id}, ct);
+            var result = await mediator.Send(command with { Id = id }, ct);
             return Ok(result);
         }
 
@@ -46,8 +39,9 @@ namespace PickleHub.Catalog.Controllers
         [Authorize(Roles = "Admin")]
         public async Task<IActionResult> Delete(Guid id, CancellationToken ct)
         {
-            await _mediator.Send(new DeleteCategoryCommand(id), ct);
+            await mediator.Send(new DeleteCategoryCommand(id), ct);
             return NoContent();
         }
     }
 }
+

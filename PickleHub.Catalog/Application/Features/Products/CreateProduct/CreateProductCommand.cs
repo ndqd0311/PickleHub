@@ -1,9 +1,9 @@
-﻿using MediatR;
-using PickleHub.Catalog.Domain.Enums;
-using PickleHub.Catalog.Infrastructure.Persistence;
-using PickleHub.Catalog.Domain;
-using PickleHub.Catalog.Domain.Entities;
+﻿using CloudinaryDotNet.Actions;
+using MediatR;
 using PickleHub.Catalog.Application.Features.Products.DTOs;
+using PickleHub.Catalog.Domain.Entities;
+using PickleHub.Catalog.Domain.Repositories;
+using PickleHub.Common.ValueObjects;
 
 namespace PickleHub.Catalog.Application.Features.Products.CreateProduct
 {
@@ -13,43 +13,58 @@ namespace PickleHub.Catalog.Application.Features.Products.CreateProduct
         Guid CategoryId,
         Guid BrandId,
         decimal BasePrice,
-        string SpecsJson
+        string? SpecsJson
     ) : IRequest<ProductDetailDto>;
 
     public class CreateProductHandler : IRequestHandler<CreateProductCommand, ProductDetailDto>
     {
-        private readonly CatalogDbContext _db;
+        private readonly IProductRepository _productRepository;
+        private readonly IUnitOfWork _unitOfWork;
 
-        public CreateProductHandler(CatalogDbContext db)
+        public CreateProductHandler(IProductRepository productRepository, IUnitOfWork unitOfWork)
         {
-            _db = db;
+            _productRepository = productRepository;
+            _unitOfWork = unitOfWork;
         }
-
         public async Task<ProductDetailDto> Handle(CreateProductCommand request, CancellationToken ct)
         {
-            var product = new Product
-            {
-                Name = request.Name,
-                Description = request.Description,
-                CategoryId = request.CategoryId,
-                BrandId = request.BrandId,
-                BasePrice = request.BasePrice,
-                SpecsJson = string.IsNullOrWhiteSpace(request.SpecsJson) ? "{}" : request.SpecsJson,
-                Status = ProductStatus.Draft
-            };
-
-            _db.Products.Add(product);
-            await _db.SaveChangesAsync(ct);
+            var slug = await GenerateUniqueSlugAsync(request.Name,null, ct);
+            var product = Product.Create(
+                request.Name,
+                slug,
+                request.Description,
+                request.CategoryId,
+                request.BrandId,
+                request.BasePrice,
+                request.SpecsJson ?? "{}"
+            );
+            _productRepository.Add(product);
+            await _unitOfWork.SaveChangesAsync(ct);
 
             return new ProductDetailDto
             {
                 Id = product.Id,
                 Name = product.Name,
+                Slug = product.Slug.Value,
                 Description = product.Description,
                 BasePrice = product.BasePrice,
                 Status = product.Status.ToString(),
-                SpecsJson = product.SpecsJson
+                SpecsJson = product.SpecsJson,
             };
         }
+
+        private async Task<Slug> GenerateUniqueSlugAsync(string name, Guid? excludeId, CancellationToken ct)
+        {
+            var baseSlug = Slug.Create(name);
+            var candidate = baseSlug;
+            var counter = 1;
+
+            while(await _productRepository.ExistsBySlugAsync(candidate.Value, excludeId, ct))
+            {
+                candidate = baseSlug.AppendSuffix(counter++);
+            }
+            return candidate;
+        }
+
     }
 }

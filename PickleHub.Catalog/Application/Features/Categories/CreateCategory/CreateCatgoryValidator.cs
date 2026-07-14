@@ -8,8 +8,7 @@ namespace PickleHub.Catalog.Application.Features.Categories.CreateCategory
         {
             RuleFor(x => x.Name)
                 .NotEmpty().WithMessage("Tên danh mục không được để trống.")
-                .MaximumLength(100).WithMessage("Tên danh mục tối đa 100 kí tự.");
+                .MaximumLength(200).WithMessage("Tên danh mục tối đa 200 ký tự.");
         }
     }
-
 }
