@@ -32,14 +32,14 @@ builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
                 context.Response.StatusCode = 401;
                 context.Response.ContentType = "application/json";
                 return context.Response.WriteAsync(
-                    "{\"error\":{\"message\":\"B?n c?n ??ng nh?p ?? th?c hi?n thao tác này.\"}}");
+                    "{\"error\":{\"message\":\"Bạn cần đăng nhập để thực hiện thao tác này.\"}}");
             },
             OnForbidden = context =>
             {
                 context.Response.StatusCode = 403;
                 context.Response.ContentType = "application/json";
                 return context.Response.WriteAsync(
-                    "{\"error\":{\"message\":\"B?n không có quy?n th?c hi?n thao tác này.\"}}");
+                    "{\"error\":{\"message\":\"Bạn không có quyền thực hiện thao tác này.\"}}");
             }
         };
     });
