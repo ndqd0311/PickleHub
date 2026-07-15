@@ -13,10 +13,11 @@ builder.Services
     .AddControllers()
      .AddJsonOptions(options =>
      {
-         // Serialize enum thành string thay vì s?
          options.JsonSerializerOptions.Converters.Add(
              new System.Text.Json.Serialization.JsonStringEnumConverter());
      });
+
+builder.Services.AddAuthorization();
 
 var app = builder.Build();
 
@@ -31,5 +32,4 @@ app.UseCors();
 app.UseAuthentication();
 app.UseAuthorization();
 app.MapControllers();
-
 app.Run();

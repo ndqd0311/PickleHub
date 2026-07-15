@@ -9,6 +9,7 @@ using PickleHub.Authen.Infrastructure.Persistence.Repositories;
 using PickleHub.Authen.Infrastructure.Service;
 using PickleHub.Common.Behaviors;
 using PickleHub.Common.Interfaces;
+using PickleHub.Common.Service;
 using Resend;
 using System.Text;
 
