@@ -11,9 +11,6 @@ public interface ICatalogClient
     Task<CatalogProductDto?> GetProductDetailsAsync(Guid productId, CancellationToken ct = default);
 }
 
-/// <summary>
-/// DTO khớp chính xác với ProductDetailDto của Catalog Service.
-/// </summary>
 public class CatalogProductDto
 {
     public Guid Id { get; set; }

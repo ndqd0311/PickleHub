@@ -8,7 +8,7 @@ using PickleHub.CartOrder.Domain.Interfaces;
 
 namespace PickleHub.CartOrder.Infrastructure.HttpClients;
 
-// Thực hiện cuộc gọi HTTP vật lý đến Customer Service sử dụng header bảo mật nội bộ X-Internal-Service.
+/// Thực hiện cuộc gọi HTTP vật lý đến Customer Service sử dụng header bảo mật nội bộ X-Internal-Service.
 public class CustomerHttpClient(HttpClient httpClient) : ICustomerClient
 {
     public async Task<CustomerDto?> GetCustomerDetailsAsync(Guid customerId, CancellationToken ct = default)
@@ -17,7 +17,7 @@ public class CustomerHttpClient(HttpClient httpClient) : ICustomerClient
         {
             var request = new HttpRequestMessage(HttpMethod.Get, $"customers/{customerId}");
             
-            // Bypass auth check bằng cách đính kèm header X-Internal-Service
+            // Bypass auth check bằng cách đính kèm header X-Internal-Service theo yêu cầu trong CustomerService_API_Contract.md
             request.Headers.Add("X-Internal-Service", "true");
 
             var response = await httpClient.SendAsync(request, ct);

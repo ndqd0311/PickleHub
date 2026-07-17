@@ -4,9 +4,7 @@ using System.Threading.Tasks;
 
 namespace PickleHub.CartOrder.Domain.Interfaces;
 
-/// <summary>
-/// Contract để giao tiếp đồng bộ với Customer Service.
-/// </summary>
+// Contract để giao tiếp đồng bộ với Customer Service.
 public interface ICustomerClient
 {
     Task<CustomerDto?> GetCustomerDetailsAsync(Guid customerId, CancellationToken ct = default);

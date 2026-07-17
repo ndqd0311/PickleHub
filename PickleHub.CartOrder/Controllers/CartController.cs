@@ -12,7 +12,7 @@ namespace PickleHub.CartOrder.Controllers;
 
 [ApiController]
 [Route("cart")]
-[Authorize] // Yêu cầu đăng nhập thông qua JWT Bearer Token
+[Authorize]
 public class CartController(ISender mediator) : ControllerBase
 {
     // GET /cart -> Lấy chi tiết giỏ hàng hiện tại

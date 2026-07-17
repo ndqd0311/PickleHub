@@ -3,10 +3,7 @@ using System.Collections.Generic;
 
 namespace PickleHub.Common.Events.Orders;
 
-/// <summary>
-/// Event phát ra khi một đơn hàng bị hủy bởi Khách hàng hoặc Admin.
-/// Khớp chính xác với mô tả trong EventContract.md.
-/// </summary>
+// Event phát ra khi một đơn hàng bị hủy bởi Khách hàng hoặc Admin.
 public record OrderCancelledEvent
 {
     public Guid OrderId { get; init; }

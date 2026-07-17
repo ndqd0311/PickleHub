@@ -18,13 +18,10 @@ namespace PickleHub.CartOrder.Controllers;
 
 [ApiController]
 [Route("orders")]
-[Authorize] // Yêu cầu đăng nhập thông qua JWT Token
+[Authorize]
 public class OrderController(ISender mediator) : ControllerBase
 {
-    // ==========================================
     // CUSTOMER ENDPOINTS
-    // ==========================================
-
     // POST /orders -> Đặt hàng (Checkout)
     [HttpPost]
     public async Task<ActionResult<Guid>> Checkout(
@@ -70,10 +67,7 @@ public class OrderController(ISender mediator) : ControllerBase
         return Ok(result);
     }
     
-    // ==========================================
-    // ADMIN ENDPOINTS (Phân quyền Admin tự động qua JWT)
-    // ==========================================
-
+    // ADMIN ENDPOINTS
     // GET /orders/admin -> Admin lấy danh sách toàn bộ đơn hàng (phân trang + lọc)
     [HttpGet("admin")]
     [Authorize(Roles = "Admin")]
@@ -115,11 +109,8 @@ public class OrderController(ISender mediator) : ControllerBase
         var result = await mediator.Send(new GetDashboardSummaryQuery(), ct);
         return Ok(result);
     }
-    
-    // ==========================================
-    // UTILITY METHODS
-    // ==========================================
 
+    // UTILITY METHODS
     private Guid GetUserId()
     {
         // Trích xuất UserId trực tiếp từ JWT Claim "sub" (hoặc NameIdentifier)

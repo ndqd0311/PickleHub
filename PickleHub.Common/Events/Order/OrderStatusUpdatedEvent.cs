@@ -15,8 +15,8 @@ public record OrderStatusUpdatedEvent
     public string OldStatus { get; init; } = string.Empty;
     public string NewStatus { get; init; } = string.Empty;
 
-    // Chỉ có giá trị khi NewStatus = "DangGiao" (Shipping)
-    public string? ShippingProvider { get; init; }   // "GHTK" | "GHN" | "ViettelPost"
+    // Chỉ có giá trị khi NewStatus = Shipping
+    public string? ShippingProvider { get; init; }
     public string? TrackingNumber { get; init; }
     public string? TrackingUrl { get; init; }
 

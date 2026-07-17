@@ -16,7 +16,7 @@ public record UpdateOrderStatusCommand(Guid OrderId, OrderStatus OrderStatus) : 
 
 public class UpdateOrderStatusCommandHandler(
     CartOrderDbContext db,
-    ICustomerClient customerClient, // Inject CustomerClient để lấy email gửi thông báo
+    ICustomerClient customerClient, 
     IPublishEndpoint publishEndpoint
 ) : IRequestHandler<UpdateOrderStatusCommand, OrderStatus>
 {

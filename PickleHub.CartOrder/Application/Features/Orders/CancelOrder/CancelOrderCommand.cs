@@ -30,7 +30,7 @@ public class CancelOrderCommandHandler(
             throw new KeyNotFoundException("Không tìm thấy đơn hàng yêu cầu hoặc bạn không có quyền hủy đơn này.");
         }
 
-        // Kiểm tra trạng thái đơn hàng (Business Rule)
+        // Kiểm tra trạng thái đơn hàng
         if (order.Status == OrderStatus.Shipping || order.Status == OrderStatus.Completed)
         {
             throw new InvalidOperationException("Đơn hàng đang được giao hoặc đã hoàn thành, không thể hủy.");
@@ -55,7 +55,7 @@ public class CancelOrderCommandHandler(
             UnitPrice = item.UnitPrice
         }).ToList();
 
-        // Publish Event "OrderCancelled" qua Message Broker theo đặc tả chuẩn EventContract.md
+        // Publish Event "OrderCancelled"
         await publishEndpoint.Publish(new OrderCancelledEvent
         {
             OrderId = order.Id,
