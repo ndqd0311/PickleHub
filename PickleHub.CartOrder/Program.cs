@@ -26,7 +26,7 @@ builder.Services.AddMediatR(cfg =>
 });
 builder.Services.AddValidatorsFromAssembly(typeof(Program).Assembly);
 
-// 3. HTTP Clients (Giao tiếp Synchronous với Catalog & Inventory Service)
+// 3. HTTP Clients (Giao tiếp Synchronous với Catalog, Inventory & Customer Service)
 builder.Services.AddHttpClient<ICatalogClient, CatalogHttpClient>(client =>
 {
     client.BaseAddress = new Uri(builder.Configuration["Services:CatalogUrl"] ?? "http://localhost:5001/");
@@ -35,6 +35,11 @@ builder.Services.AddHttpClient<ICatalogClient, CatalogHttpClient>(client =>
 builder.Services.AddHttpClient<IInventoryClient, InventoryHttpClient>(client =>
 {
     client.BaseAddress = new Uri(builder.Configuration["Services:InventoryUrl"] ?? "http://localhost:5002/");
+});
+
+builder.Services.AddHttpClient<ICustomerClient, CustomerHttpClient>(client =>
+{
+    client.BaseAddress = new Uri(builder.Configuration["Services:CustomerUrl"] ?? "http://localhost:5003/");
 });
 
 // 4. MassTransit + RabbitMQ (Giao tiếp Asynchronous)

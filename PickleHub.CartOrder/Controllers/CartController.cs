@@ -1,4 +1,6 @@
+using System.Security.Claims;
 using MediatR;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using PickleHub.CartOrder.Application.Features.Cart.AddItem;
 using PickleHub.CartOrder.Application.Features.Cart.DTOs;
@@ -10,6 +12,7 @@ namespace PickleHub.CartOrder.Controllers;
 
 [ApiController]
 [Route("cart")]
+[Authorize] // Yêu cầu đăng nhập thông qua JWT Bearer Token
 public class CartController(ISender mediator) : ControllerBase
 {
     // GET /cart -> Lấy chi tiết giỏ hàng hiện tại
@@ -53,10 +56,13 @@ public class CartController(ISender mediator) : ControllerBase
 
     private Guid GetUserId()
     {
-        var userIdHeader = Request.Headers["X-User-Id"].ToString();
-        if (!Guid.TryParse(userIdHeader, out var userId))
+        // Trích xuất UserId trực tiếp từ JWT Claim "sub" (hoặc NameIdentifier)
+        var userIdClaim = User.FindFirst(ClaimTypes.NameIdentifier)?.Value 
+                          ?? User.FindFirst("sub")?.Value;
+
+        if (string.IsNullOrEmpty(userIdClaim) || !Guid.TryParse(userIdClaim, out var userId))
         {
-            throw new UnauthorizedAccessException("Không tìm thấy thông tin định danh người dùng X-User-Id.");
+            throw new UnauthorizedAccessException("Không tìm thấy thông tin định danh người dùng trong Token.");
         }
         return userId;
     }

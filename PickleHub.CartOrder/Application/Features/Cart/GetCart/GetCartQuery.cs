@@ -9,7 +9,7 @@ namespace PickleHub.CartOrder.Application.Features.Cart.GetCart;
 // Query lấy thông tin chi tiết giỏ hàng của User.
 public record GetCartQuery(Guid UserId) : IRequest<CartDto>;
 
-public class GetCartHandler(CartOrderDbContext db, ICatalogClient catalogClient ) : IRequestHandler<GetCartQuery, CartDto>
+public class GetCartHandler(CartOrderDbContext db, ICatalogClient catalogClient) : IRequestHandler<GetCartQuery, CartDto>
 {
     public async Task<CartDto> Handle(GetCartQuery request, CancellationToken ct)
     {
@@ -30,15 +30,27 @@ public class GetCartHandler(CartOrderDbContext db, ICatalogClient catalogClient 
 
         foreach (var item in cart.Items)
         {
+            // Gọi Catalog Service để lấy chi tiết sản phẩm
             var productDetails = await catalogClient.GetProductDetailsAsync(item.ProductId, ct);
             if (productDetails is null) continue;
+
+            // Lấy giá của biến thể cụ thể, nếu không có thì dùng BasePrice làm giá trị mặc định
+            var variant = productDetails.Variants.FirstOrDefault(v => v.Id == item.ProductId);
+            var unitPrice = variant?.Price ?? productDetails.BasePrice;
+
+            // Lấy ảnh thumbnail chính (sortOrder nhỏ nhất, không phải Size Chart)
+            var imageUrl = productDetails.Images
+                .Where(img => !img.IsSizeChart)
+                .OrderBy(img => img.SortOrder)
+                .FirstOrDefault()?.Url ?? string.Empty;
+
             cartItemDtos.Add(new CartItemDto
             {
                 CartItemId = item.Id,
                 ProductId = item.ProductId,
                 ProductName = productDetails.Name,
-                ImageUrl = productDetails.ImageUrl,
-                UnitPrice = productDetails.Price,
+                ImageUrl = imageUrl,
+                UnitPrice = unitPrice,
                 Quantity = item.Quantity
             });
         }
