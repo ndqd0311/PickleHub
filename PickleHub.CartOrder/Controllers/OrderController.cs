@@ -1,4 +1,6 @@
+using System.Security.Claims;
 using MediatR;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using PickleHub.CartOrder.Application.Features.Orders.CancelOrder;
 using PickleHub.CartOrder.Application.Features.Orders.Checkout;
@@ -16,9 +18,11 @@ namespace PickleHub.CartOrder.Controllers;
 
 [ApiController]
 [Route("orders")]
+[Authorize]
 public class OrderController(ISender mediator) : ControllerBase
 {
-    // CUSTOMER ENDPOINTS (Yêu cầu X-User-Id)
+    // CUSTOMER ENDPOINTS
+    // POST /orders -> Đặt hàng (Checkout)
     [HttpPost]
     public async Task<ActionResult<Guid>> Checkout(
         [FromBody] CheckoutRequest request, CancellationToken ct)
@@ -63,9 +67,10 @@ public class OrderController(ISender mediator) : ControllerBase
         return Ok(result);
     }
     
-    // ADMIN ENDPOINTS (Yêu cầu X-User-Role == Admin)
+    // ADMIN ENDPOINTS
     // GET /orders/admin -> Admin lấy danh sách toàn bộ đơn hàng (phân trang + lọc)
     [HttpGet("admin")]
+    [Authorize(Roles = "Admin")]
     public async Task<ActionResult<PagedResult<OrderSummaryDto>>> GetOrdersAdmin(
         [FromQuery] OrderStatus? status,
         [FromQuery] string? searchKeyword,
@@ -73,57 +78,50 @@ public class OrderController(ISender mediator) : ControllerBase
         [FromQuery] int pageSize = 20,
         CancellationToken ct = default)
     {
-        EnsureAdmin();
         var result = await mediator.Send(new GetOrdersAdminQuery(status, searchKeyword, page, pageSize), ct);
         return Ok(result);
     }
 
     // GET /orders/admin/{id} -> Admin xem chi tiết đơn hàng bất kỳ
     [HttpGet("admin/{id:guid}")]
+    [Authorize(Roles = "Admin")]
     public async Task<ActionResult<OrderDto>> GetOrderByIdAdmin(Guid id, CancellationToken ct)
     {
-        EnsureAdmin();
         var result = await mediator.Send(new GetOrderByIdAdminQuery(id), ct);
         return Ok(result);
     }
 
     // PUT /orders/admin/{id}/status -> Admin cập nhật trạng thái giao hàng/hoàn thành
     [HttpPut("admin/{id:guid}/status")]
+    [Authorize(Roles = "Admin")]
     public async Task<ActionResult<OrderStatus>> UpdateOrderStatus(
         Guid id, [FromBody] UpdateOrderStatusRequest request, CancellationToken ct)
     {
-        EnsureAdmin();
         var result = await mediator.Send(new UpdateOrderStatusCommand(id, request.Status), ct);
         return Ok(result);
     }
 
     // GET /orders/admin/dashboard-summary -> Admin xem thống kê doanh số doanh thu
     [HttpGet("admin/dashboard-summary")]
+    [Authorize(Roles = "Admin")]
     public async Task<ActionResult<OrderDashboardSummaryDto>> GetDashboardSummary(CancellationToken ct)
     {
-        EnsureAdmin();
         var result = await mediator.Send(new GetDashboardSummaryQuery(), ct);
         return Ok(result);
     }
-    
+
     // UTILITY METHODS
     private Guid GetUserId()
     {
-        var userIdHeader = Request.Headers["X-User-Id"].ToString();
-        if (!Guid.TryParse(userIdHeader, out var userId))
+        // Trích xuất UserId trực tiếp từ JWT Claim "sub" (hoặc NameIdentifier)
+        var userIdClaim = User.FindFirst(ClaimTypes.NameIdentifier)?.Value 
+                          ?? User.FindFirst("sub")?.Value;
+
+        if (string.IsNullOrEmpty(userIdClaim) || !Guid.TryParse(userIdClaim, out var userId))
         {
-            throw new UnauthorizedAccessException("Không tìm thấy thông tin định danh người dùng X-User-Id.");
+            throw new UnauthorizedAccessException("Không tìm thấy thông tin định danh người dùng trong Token.");
         }
         return userId;
-    }
-
-    private void EnsureAdmin()
-    {
-        var roleHeader = Request.Headers["X-User-Role"].ToString();
-        if (roleHeader != "Admin")
-        {
-            throw new UnauthorizedAccessException("Bạn không có quyền thực hiện hành động này. Yêu cầu quyền Admin.");
-        }
     }
 }
 
