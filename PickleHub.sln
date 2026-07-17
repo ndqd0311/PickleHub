@@ -11,6 +11,8 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "PickleHub.Authen", "PickleH
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "PickleHub.CartOrder", "PickleHub.CartOrder\PickleHub.CartOrder.csproj", "{A7AD1120-19CA-4726-BD39-F691E71C12A5}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "PickleHub.Payment", "PickleHub.Payment\PickleHub.Payment.csproj", "{24D55B09-AD3B-47BC-B883-4B626947AF1D}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -33,6 +35,10 @@ Global
 		{A7AD1120-19CA-4726-BD39-F691E71C12A5}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{A7AD1120-19CA-4726-BD39-F691E71C12A5}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{A7AD1120-19CA-4726-BD39-F691E71C12A5}.Release|Any CPU.Build.0 = Release|Any CPU
+		{24D55B09-AD3B-47BC-B883-4B626947AF1D}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{24D55B09-AD3B-47BC-B883-4B626947AF1D}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{24D55B09-AD3B-47BC-B883-4B626947AF1D}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{24D55B09-AD3B-47BC-B883-4B626947AF1D}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
