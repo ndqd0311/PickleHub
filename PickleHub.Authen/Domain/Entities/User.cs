@@ -40,7 +40,7 @@ namespace PickleHub.Authen.Domain.Entities
             SetUpdated();
         }
 
-        public void UnBLock() 
+        public void UnBlock() 
         {
             IsBlocked = false;
             SetUpdated();

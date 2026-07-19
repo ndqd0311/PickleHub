@@ -10,6 +10,7 @@ builder.Services
     .AddInfrastructureServices(builder.Configuration)
     .AddJwtAuthentication(builder.Configuration)
     .AddCorsPolicy(builder.Configuration)
+    .AddMessageBus(builder.Configuration)
     .AddSwaggerWithJwt()
     .AddControllers();
 

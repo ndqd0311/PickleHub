@@ -61,13 +61,13 @@ namespace PickleHub.Authen.Controllers
         }
 
         // Admin only — gọi từ Gateway sau khi đã validate JWT + role
-        [HttpPatch("users/{userId:guid}/block")]
-        [Authorize(Roles = "Admin")]
-        public async Task<IActionResult> BlockUser(Guid userId, [FromBody] BlockUserCommand command, CancellationToken ct)
-        {
-            await mediator.Send(command with { UserId = userId}, ct);
-            return NoContent();
-        }
+        //[HttpPatch("users/{userId:guid}/block")]
+        //[Authorize(Roles = "Admin")]
+        //public async Task<IActionResult> BlockUser(Guid userId, [FromBody] BlockUserCommand command, CancellationToken ct)
+        //{
+        //    await mediator.Send(command with { UserId = userId}, ct);
+        //    return NoContent();
+        //}
 
         [Authorize]
         [HttpPatch("change-password")]

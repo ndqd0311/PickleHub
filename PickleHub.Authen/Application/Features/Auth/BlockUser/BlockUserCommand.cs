@@ -46,7 +46,7 @@ namespace PickleHub.Authen.Application.Features.Auth.BlockUser
             }
             else
             {
-                user.UnBLock();
+                user.UnBlock();
             }
 
             await _unitOfWork.SaveChangesAsync(ct);

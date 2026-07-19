@@ -37,6 +37,12 @@ namespace PickleHub.Authen.Application.Features.Auth.RefreshTokens
             if (existing is null || !existing.IsActive)
                 throw new UnauthorizedException("Refresh token không hợp lệ hoặc đã hết hạn.");
 
+            var user = existing.User
+                ?? throw new UnauthorizedException("Không tìm thấy người dùng.");
+
+            if (user.IsBlocked)
+                throw new ForbiddenException("Tài khoản đã bị khóa.");
+
             existing.Revoke();
 
             var refreshDays = int.Parse(_config["Jwt:RefreshTokenDays"]!);
@@ -45,10 +51,6 @@ namespace PickleHub.Authen.Application.Features.Auth.RefreshTokens
 
             _refreshTokenRepository.Add(newToken);
             await _unitOfWork.SaveChangesAsync(ct);
-
-            // Cần load User để generate access token
-            var user = existing.User
-                ?? throw new UnauthorizedException("Không tìm thấy người dùng.");
 
             return new AuthResultDto
             {

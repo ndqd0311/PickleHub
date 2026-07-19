@@ -1,4 +1,5 @@
 ﻿using FluentValidation;
+using MassTransit;
 using MediatR;
 using Microsoft.EntityFrameworkCore;
 using PickleHub.Authen.Application.DTOs;
@@ -7,6 +8,8 @@ using PickleHub.Authen.Domain.Interfaces.Repositories;
 using PickleHub.Authen.Infrastructure.Persistence;
 using PickleHub.Authen.Infrastructure.Service;
 using PickleHub.Common.Exceptions;
+using MassTransit;
+using PickleHub.Common.Events.Authen;
 
 namespace PickleHub.Authen.Application.Features.Auth.Register
 {
@@ -19,19 +22,22 @@ namespace PickleHub.Authen.Application.Features.Auth.Register
         private readonly IUnitOfWork _unitOfWork;
         private readonly JwtTokenService _jwtService;
         private readonly IConfiguration _config;
+        private readonly IPublishEndpoint _publishEndpoint;
 
         public RegisterHandler(
             IUserRepository userRepository,
             IRefreshTokenRepository refreshTokenRepository,
             IUnitOfWork unitOfWork,
             JwtTokenService jwtService,
-            IConfiguration config)
+            IConfiguration config,
+            IPublishEndpoint publishEndpoint)
         {
             _userRepository = userRepository;
             _refreshTokenRepository = refreshTokenRepository;
             _unitOfWork = unitOfWork;
             _jwtService = jwtService;
             _config = config;
+            _publishEndpoint = publishEndpoint;
         }
 
         public async Task<AuthResultDto> Handle(RegisterCommand request, CancellationToken ct)
@@ -52,6 +58,14 @@ namespace PickleHub.Authen.Application.Features.Auth.Register
 
             _refreshTokenRepository.Add(refreshToken);
             await _unitOfWork.SaveChangesAsync(ct);
+
+            // Publish event để Customer Service tạo customer record
+            await _publishEndpoint.Publish(new UserRegisteredEvent
+            {
+                UserId = user.Id,
+                Email = user.Email,
+                RegisteredAt = DateTime.UtcNow
+            }, ct);
 
             return new AuthResultDto
             {

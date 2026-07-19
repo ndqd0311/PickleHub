@@ -1,4 +1,5 @@
 using FluentValidation;
+using MassTransit;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
@@ -144,6 +145,28 @@ namespace PickleHub.Authen.Extensions
                         },
                         []
                     }
+                });
+            });
+
+            return services;
+        }
+
+        public static IServiceCollection AddMessageBus(
+          this IServiceCollection services, IConfiguration config)
+        {
+            services.AddMassTransit(x =>
+            {
+                x.AddConsumers(typeof(Program).Assembly);
+
+                x.UsingRabbitMq((ctx, cfg) =>
+                {
+                    cfg.Host(config["RabbitMQ:Host"], "/", h =>
+                    {
+                        h.Username(config["RabbitMQ:Username"]);
+                        h.Password(config["RabbitMQ:Password"]);
+                    });
+
+                    cfg.ConfigureEndpoints(ctx);
                 });
             });
 
