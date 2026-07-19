@@ -3,6 +3,7 @@ using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using PickleHub.Catalog.Application.Features.Products.AddProductImage;
 using PickleHub.Catalog.Application.Features.Products.AddProductVarriant;
+using PickleHub.Catalog.Application.Features.Products.GetProductVariant;
 using PickleHub.Catalog.Application.Features.Products.RemoveImage;
 using PickleHub.Catalog.Application.Features.Products.RemoveProductVariant;
 using PickleHub.Catalog.Application.Features.Products.UpdateProductVariant;
@@ -39,7 +40,6 @@ namespace PickleHub.Catalog.Controllers
         }
 
         //Variants 
-
         [HttpPost("variants")]
         public async Task<IActionResult> AddVariant(
             Guid productId,
