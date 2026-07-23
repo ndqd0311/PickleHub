@@ -9,28 +9,32 @@ using PickleHub.CartOrder.Domain.Interfaces;
 using PickleHub.CartOrder.Infrastructure.Persistence;
 using PickleHub.Common.Events.Orders;
 
-namespace PickleHub.CartOrder.Application.Features.Orders.UpdateOrderStatusCommand;
+namespace PickleHub.CartOrder.Application.Features.Orders.AdminCommands;
 
-public record UpdateOrderStatusCommand(Guid OrderId, OrderStatus OrderStatus) : IRequest<string>;
+public record ConfirmOrderCommand(Guid OrderId) : IRequest<bool>;
 
-public class UpdateOrderStatusCommandHandler(
+public class ConfirmOrderCommandHandler(
     CartOrderDbContext db,
     ICustomerClient customerClient,
     IPublishEndpoint publishEndpoint
-) : IRequestHandler<UpdateOrderStatusCommand, string>
+) : IRequestHandler<ConfirmOrderCommand, bool>
 {
-    public async Task<string> Handle(UpdateOrderStatusCommand request, CancellationToken ct)
+    public async Task<bool> Handle(ConfirmOrderCommand request, CancellationToken ct)
     {
         var order = await db.Orders.FirstOrDefaultAsync(o => o.Id == request.OrderId, ct);
-        
         if (order is null)
         {
-            throw new KeyNotFoundException("Không tìm thấy đơn hàng.");
+            throw new KeyNotFoundException("Không tìm thấy đơn hàng yêu cầu.");
+        }
+
+        if (order.Status != OrderStatus.Pending)
+        {
+            throw new InvalidOperationException($"Không thể xác nhận đơn hàng đang ở trạng thái '{order.Status}'.");
         }
 
         var customer = await customerClient.GetCustomerDetailsAsync(order.CustomerId, ct);
         var oldStatus = order.Status;
-        order.Status = request.OrderStatus;
+        order.Status = OrderStatus.Confirmed;
         order.UpdatedAt = DateTime.UtcNow;
 
         await db.SaveChangesAsync(ct);
@@ -45,7 +49,7 @@ public class UpdateOrderStatusCommandHandler(
             NewStatus = order.Status.ToString(),
             UpdatedAt = DateTime.UtcNow
         }, ct);
-        
-        return order.Status.ToString();
+
+        return true;
     }
 }

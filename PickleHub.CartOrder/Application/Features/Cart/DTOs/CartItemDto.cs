@@ -1,17 +1,18 @@
-﻿namespace PickleHub.CartOrder.Application.Features.Cart.DTOs;
+using System;
 
-// DTO cho từng sản phẩm trong giỏ
+namespace PickleHub.CartOrder.Application.Features.Cart.DTOs;
+
 public class CartItemDto
 {
-    public Guid CartItemId { get; set; }        
+    public Guid Id { get; set; }
+    public Guid ProductVariantId { get; set; }
     public Guid ProductId { get; set; }
 
-    // Lấy live từ Catalog Service khi query giỏ hàng
-    // (không lưu DB — Cart chỉ lưu ProductId + Quantity)
-    public string ProductName { get; set; } = string.Empty;
-    public string ImageUrl { get; set; } = string.Empty;
-    public decimal UnitPrice { get; set; }
+    public string ProductNameSnapshot { get; set; } = string.Empty;
+    public string VariantAttributesSnapshot { get; set; } = string.Empty;
+    public string? ImageUrlSnapshot { get; set; }
 
+    public decimal UnitPrice { get; set; }
     public int Quantity { get; set; }
-    public decimal SubTotal => UnitPrice * Quantity;
+    public decimal Subtotal => UnitPrice * Quantity;
 }

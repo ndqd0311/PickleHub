@@ -19,7 +19,8 @@ public class CartOrderDbContext : DbContext
         modelBuilder.Entity<Cart>(entity =>
         {
             entity.HasKey(c => c.Id);
-            entity.HasIndex(c => c.UserId).IsUnique(); // 1 user = 1 cart
+            entity.HasIndex(c => c.UserId);
+            entity.HasIndex(c => c.SessionId);
             entity.HasMany(c => c.Items)
                   .WithOne(i => i.Cart)
                   .HasForeignKey(i => i.CartId)
@@ -29,13 +30,14 @@ public class CartOrderDbContext : DbContext
         modelBuilder.Entity<CartItem>(entity =>
         {
             entity.HasKey(i => i.Id);
-            entity.HasIndex(i => new { i.CartId, i.ProductId }).IsUnique(); 
+            entity.HasIndex(i => new { i.CartId, i.ProductVariantId }).IsUnique(); 
         });
 
         modelBuilder.Entity<Order>(entity =>
         {
             entity.HasKey(o => o.Id);
-            entity.HasIndex(o => o.UserId);
+            entity.HasIndex(o => o.CustomerId);
+            entity.HasIndex(o => o.Status);
             entity.HasMany(o => o.Items)
                   .WithOne(i => i.Order)
                   .HasForeignKey(i => i.OrderId)

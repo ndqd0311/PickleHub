@@ -1,12 +1,18 @@
-﻿namespace PickleHub.CartOrder.Application.Features.Orders.DTOs;
+using System;
 
+namespace PickleHub.CartOrder.Application.Features.Orders.DTOs;
 
-// DTO cho từng dòng sản phẩm trong đơn hàng
 public class OrderItemDto
 {
+    public Guid Id { get; set; }
+    public Guid ProductVariantId { get; set; }
     public Guid ProductId { get; set; }
-    public string ProductName { get; set; } = string.Empty;  // snapshot
-    public decimal UnitPrice { get; set; }                   // snapshot
+    
+    public string ProductNameSnapshot { get; set; } = string.Empty;
+    public string VariantAttributesSnapshot { get; set; } = string.Empty;
+    public string? ImageUrlSnapshot { get; set; }
+    
+    public decimal UnitPrice { get; set; }
     public int Quantity { get; set; }
-    public decimal SubTotal => UnitPrice * Quantity;         // tính toán, không lưu DB
+    public decimal Subtotal { get; set; }
 }

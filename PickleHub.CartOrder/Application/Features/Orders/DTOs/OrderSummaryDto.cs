@@ -1,12 +1,16 @@
-﻿namespace PickleHub.CartOrder.Application.Features.Orders.DTOs;
+using System;
+
+namespace PickleHub.CartOrder.Application.Features.Orders.DTOs;
 
 public class OrderSummaryDto
 {
-    // DTO rút gọn — dùng cho danh sách đơn hàng (GetMyOrders)
-    // Không cần Items vì hiển thị dạng list
-    public Guid OrderId { get; set; }
-    public decimal TotalPrice { get; set; }
+    public Guid Id { get; set; }
     public string Status { get; set; } = string.Empty;
+    public string PaymentMethod { get; set; } = string.Empty;
+    public string PaymentStatus { get; set; } = string.Empty;
+    public decimal TotalAmount { get; set; }
+    public int ItemCount { get; set; }
+    public string FirstItemName { get; set; } = string.Empty;
+    public string? FirstItemImage { get; set; }
     public DateTime CreatedAt { get; set; }
-    public int ItemCount { get; set; }  
 }
