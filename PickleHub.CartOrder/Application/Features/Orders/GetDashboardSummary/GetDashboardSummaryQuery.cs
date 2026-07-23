@@ -1,3 +1,7 @@
+using System;
+using System.Linq;
+using System.Threading;
+using System.Threading.Tasks;
 using MediatR;
 using Microsoft.EntityFrameworkCore;
 using PickleHub.CartOrder.Domain.Enums;
@@ -13,25 +17,23 @@ public class GetDashboardSummaryQueryHandler(CartOrderDbContext db)
 {
     public async Task<OrderDashboardSummaryDto> Handle(GetDashboardSummaryQuery request, CancellationToken ct)
     {
-        //Đếm tổng số lượng đơn hàng theo từng trạng thái
-        var totalOrders = await db.Orders.CountAsync(ct);
-        
-        var pendingCount = await db.Orders.CountAsync(o => o.Status == OrderStatus.Pending, ct);
-        var completedCount = await db.Orders.CountAsync(o => o.Status == OrderStatus.Completed, ct);
-        var cancelledCount = await db.Orders.CountAsync(o => o.Status == OrderStatus.Cancelled, ct);
+        var today = DateTime.UtcNow.Date;
+        var startOfMonth = new DateTime(DateTime.UtcNow.Year, DateTime.UtcNow.Month, 1, 0, 0, 0, DateTimeKind.Utc);
 
-        //Tính tổng doanh thu (chỉ cộng tiền từ những đơn hàng đã thanh toán thành công hoặc đã hoàn thành)
-        var totalRevenue = await db.Orders
-            .Where(o => o.Status == OrderStatus.Confirmed || o.Status == OrderStatus.Completed)
-            .SumAsync(o => o.TotalPrice, ct);
+        var todayOrders = await db.Orders.CountAsync(o => o.CreatedAt >= today, ct);
+        var todayRevenue = await db.Orders
+            .Where(o => o.CreatedAt >= today && (o.Status == OrderStatus.Confirmed || o.Status == OrderStatus.Shipping || o.Status == OrderStatus.Completed))
+            .SumAsync(o => (decimal?)o.TotalAmount, ct) ?? 0m;
+
+        var pendingOrders = await db.Orders.CountAsync(o => o.Status == OrderStatus.Pending, ct);
+        var totalOrdersThisMonth = await db.Orders.CountAsync(o => o.CreatedAt >= startOfMonth, ct);
 
         return new OrderDashboardSummaryDto
         {
-            TotalRevenue = totalRevenue,
-            TotalOrders = totalOrders,
-            PendingOrders = pendingCount,
-            CompletedOrders = completedCount,
-            CancelledOrders = cancelledCount
+            TodayOrders = todayOrders,
+            TodayRevenue = todayRevenue,
+            PendingOrders = pendingOrders,
+            TotalOrdersThisMonth = totalOrdersThisMonth
         };
     }
 }
@@ -39,9 +41,8 @@ public class GetDashboardSummaryQueryHandler(CartOrderDbContext db)
 // DTO chứa dữ liệu tóm tắt báo cáo kinh doanh cho Admin Dashboard
 public class OrderDashboardSummaryDto
 {
-    public decimal TotalRevenue { get; set; }
-    public int TotalOrders { get; set; }
+    public int TodayOrders { get; set; }
+    public decimal TodayRevenue { get; set; }
     public int PendingOrders { get; set; }
-    public int CompletedOrders { get; set; }
-    public int CancelledOrders { get; set; }
+    public int TotalOrdersThisMonth { get; set; }
 }

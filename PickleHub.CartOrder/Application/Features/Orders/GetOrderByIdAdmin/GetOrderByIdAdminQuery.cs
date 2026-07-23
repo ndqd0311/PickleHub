@@ -1,3 +1,7 @@
+using System;
+using System.Linq;
+using System.Threading;
+using System.Threading.Tasks;
 using MediatR;
 using Microsoft.EntityFrameworkCore;
 using PickleHub.CartOrder.Application.Features.Orders.DTOs;
@@ -24,22 +28,44 @@ public class GetOrderByIdAdminQueryHandler(CartOrderDbContext db)
 
         return new OrderDto
         {
-            OrderId = order.Id,
-            TotalPrice = order.TotalPrice,
+            Id = order.Id,
+            CustomerId = order.CustomerId,
             Status = order.Status.ToString(),
-            CreatedAt = order.CreatedAt,
+            PaymentMethod = order.PaymentMethod,
+            PaymentStatus = order.PaymentStatus.ToString(),
             
             ShippingFullName = order.ShippingFullName,
             ShippingPhone = order.ShippingPhone,
-            ShippingAddress = order.ShippingAddress,
-            ShippingCity = order.ShippingCity,
+            ShippingProvince = order.ShippingProvince,
+            ShippingDistrict = order.ShippingDistrict,
+            ShippingWard = order.ShippingWard,
+            ShippingStreetAddress = order.ShippingStreetAddress,
+            
+            ShippingProvider = order.ShippingProvider,
+            TrackingNumber = order.TrackingNumber,
+            TrackingUrl = order.TrackingUrl,
+            
+            Subtotal = order.Subtotal,
+            ShippingFee = order.ShippingFee,
+            TotalAmount = order.TotalAmount,
+            
+            CancelledBy = order.CancelledBy,
+            CancelReason = order.CancelReason,
+            
+            CreatedAt = order.CreatedAt,
+            UpdatedAt = order.UpdatedAt,
 
             Items = order.Items.Select(item => new OrderItemDto
             {
+                Id = item.Id,
+                ProductVariantId = item.ProductVariantId != Guid.Empty ? item.ProductVariantId : item.ProductId,
                 ProductId = item.ProductId,
-                ProductName = item.ProductName,
+                ProductNameSnapshot = item.ProductNameSnapshot,
+                VariantAttributesSnapshot = item.VariantAttributesSnapshot,
+                ImageUrlSnapshot = item.ImageUrlSnapshot,
                 UnitPrice = item.UnitPrice,
-                Quantity = item.Quantity
+                Quantity = item.Quantity,
+                Subtotal = item.Subtotal
             }).ToList()
         };
     }

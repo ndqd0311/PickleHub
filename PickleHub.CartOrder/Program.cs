@@ -42,10 +42,21 @@ builder.Services.AddHttpClient<ICustomerClient, CustomerHttpClient>(client =>
     client.BaseAddress = new Uri(builder.Configuration["Services:CustomerUrl"] ?? "http://localhost:5003/");
 });
 
+builder.Services.AddHttpClient<ISystemClient, SystemHttpClient>(client =>
+{
+    client.BaseAddress = new Uri(builder.Configuration["Services:SystemUrl"] ?? "http://localhost:5009/");
+});
+
+builder.Services.AddHttpClient<IPaymentClient, PaymentHttpClient>(client =>
+{
+    client.BaseAddress = new Uri(builder.Configuration["Services:PaymentUrl"] ?? "http://localhost:5006/");
+});
+
 // 4. MassTransit + RabbitMQ (Giao tiếp Asynchronous)
 builder.Services.AddMassTransit(x =>
 {
     x.AddConsumer<PaymentCompletedConsumer>();
+    x.AddConsumer<PaymentFailedConsumer>();
 
     x.UsingRabbitMq((ctx, cfg) =>
     {
@@ -54,6 +65,11 @@ builder.Services.AddMassTransit(x =>
         cfg.ReceiveEndpoint("cartorder-payment-completed", e =>
         {
             e.ConfigureConsumer<PaymentCompletedConsumer>(ctx);
+        });
+
+        cfg.ReceiveEndpoint("cartorder-payment-failed", e =>
+        {
+            e.ConfigureConsumer<PaymentFailedConsumer>(ctx);
         });
     });
 });

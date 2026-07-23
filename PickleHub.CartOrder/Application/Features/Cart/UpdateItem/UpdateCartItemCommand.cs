@@ -1,31 +1,52 @@
+using System;
+using System.Threading;
+using System.Threading.Tasks;
 using MediatR;
 using Microsoft.EntityFrameworkCore;
+using PickleHub.CartOrder.Application.Features.Cart.DTOs;
+using PickleHub.CartOrder.Application.Features.Cart.GetCart;
 using PickleHub.CartOrder.Infrastructure.Persistence;
 
 namespace PickleHub.CartOrder.Application.Features.Cart.UpdateItem;
 
-// Command cập nhật số lượng sản phẩm trong giỏ hàng.
-public record UpdateCartItemCommand(Guid UserId, Guid ProductId, int Quantity) : IRequest<Guid>;
+/// <summary>
+/// Command cập nhật số lượng dòng CartItem theo itemId (Nếu quantity <= 0 thì xóa khỏi giỏ).
+/// </summary>
+public record UpdateCartItemCommand(
+    Guid? UserId,
+    Guid CartItemId,
+    int Quantity
+) : IRequest<CartDto>;
 
-public class UpdateCartItemCommandHandler(CartOrderDbContext db) 
-    : IRequestHandler<UpdateCartItemCommand, Guid>
+public class UpdateCartItemCommandHandler(
+    CartOrderDbContext db,
+    ISender mediator
+) : IRequestHandler<UpdateCartItemCommand, CartDto>
 {
-    public async Task<Guid> Handle(UpdateCartItemCommand request, CancellationToken ct)
+    public async Task<CartDto> Handle(UpdateCartItemCommand request, CancellationToken ct)
     {
         var item = await db.CartItems
             .Include(i => i.Cart)
-            .FirstOrDefaultAsync(
-                i => i.Cart.UserId == request.UserId && 
-                     i.ProductId == request.ProductId,
-                ct);
+            .FirstOrDefaultAsync(i => i.Id == request.CartItemId, ct);
 
         if (item is null)
         {
             throw new KeyNotFoundException("Không tìm thấy sản phẩm này trong giỏ hàng.");
         }
-        
-        item.Quantity = request.Quantity;
+
+        if (request.Quantity <= 0)
+        {
+            db.CartItems.Remove(item);
+        }
+        else
+        {
+            item.Quantity = request.Quantity;
+            item.UpdatedAt = DateTime.UtcNow;
+        }
+
+        item.Cart.UpdatedAt = DateTime.UtcNow;
         await db.SaveChangesAsync(ct);
-        return item.ProductId;
+
+        return await mediator.Send(new GetCartQuery(item.Cart.UserId, item.Cart.SessionId), ct);
     }
 }

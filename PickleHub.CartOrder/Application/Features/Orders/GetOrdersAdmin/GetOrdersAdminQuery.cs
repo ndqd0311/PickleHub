@@ -1,3 +1,6 @@
+using System.Linq;
+using System.Threading;
+using System.Threading.Tasks;
 using MediatR;
 using Microsoft.EntityFrameworkCore;
 using PickleHub.CartOrder.Application.Features.Orders.DTOs;
@@ -21,9 +24,8 @@ public class GetOrdersAdminQueryHandler(CartOrderDbContext db)
 {
     public async Task<PagedResult<OrderSummaryDto>> Handle(GetOrdersAdminQuery request, CancellationToken ct)
     {
-        var query = db.Orders.AsQueryable();
+        var query = db.Orders.Include(o => o.Items).AsQueryable();
 
-        //Lọc theo trạng thái đơn hàng (nếu có)
         if (request.Status.HasValue)
         {
             query = query.Where(o => o.Status == request.Status.Value);
@@ -40,22 +42,29 @@ public class GetOrdersAdminQueryHandler(CartOrderDbContext db)
         //Đếm tổng số bản ghi thỏa mãn điều kiện lọc
         var totalItems = await query.CountAsync(ct);
 
-        //Phân trang và lấy dữ liệu rút gọn (Projection)
-        var items = await query
+        var rawItems = await query
             .OrderByDescending(o => o.CreatedAt)
             .Skip((request.Page - 1) * request.PageSize)
             .Take(request.PageSize)
-            .Select(o => new OrderSummaryDto
-            {
-                OrderId = o.Id,
-                TotalPrice = o.TotalPrice,
-                Status = o.Status.ToString(),
-                CreatedAt = o.CreatedAt,
-                ItemCount = o.Items.Count
-            })
             .ToListAsync(ct);
 
-        //Trả về kết quả phân trang chuẩn
+        var items = rawItems.Select(o =>
+        {
+            var firstItem = o.Items.FirstOrDefault();
+            return new OrderSummaryDto
+            {
+                Id = o.Id,
+                Status = o.Status.ToString(),
+                PaymentMethod = o.PaymentMethod,
+                PaymentStatus = o.PaymentStatus.ToString(),
+                TotalAmount = o.TotalAmount,
+                ItemCount = o.Items.Sum(i => i.Quantity),
+                FirstItemName = firstItem?.ProductNameSnapshot ?? string.Empty,
+                FirstItemImage = firstItem?.ImageUrlSnapshot,
+                CreatedAt = o.CreatedAt
+            };
+        }).ToList();
+
         return new PagedResult<OrderSummaryDto>
         {
             Items = items,

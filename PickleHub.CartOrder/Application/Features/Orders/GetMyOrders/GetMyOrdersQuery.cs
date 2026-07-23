@@ -1,3 +1,8 @@
+using System;
+using System.Collections.Generic;
+using System.Linq;
+using System.Threading;
+using System.Threading.Tasks;
 using MediatR;
 using Microsoft.EntityFrameworkCore;
 using PickleHub.CartOrder.Application.Features.Orders.DTOs;
@@ -14,18 +19,26 @@ public class GetMyOrdersQueryHandler(CartOrderDbContext db)
     public async Task<List<OrderSummaryDto>> Handle(GetMyOrdersQuery request, CancellationToken ct)
     {
         var orders = await db.Orders
-            .Where(o => o.UserId == request.UserId)
+            .Include(o => o.Items)
+            .Where(o => o.CustomerId == request.UserId)
             .OrderByDescending(o => o.CreatedAt)
-            .Select(o => new OrderSummaryDto
-            {
-                OrderId = o.Id,
-                TotalPrice = o.TotalPrice,
-                Status = o.Status.ToString(),       
-                CreatedAt = o.CreatedAt,
-                ItemCount = o.Items.Count   
-            })
             .ToListAsync(ct);
 
-        return orders;
+        return orders.Select(o =>
+        {
+            var firstItem = o.Items.FirstOrDefault();
+            return new OrderSummaryDto
+            {
+                Id = o.Id,
+                Status = o.Status.ToString(),
+                PaymentMethod = o.PaymentMethod,
+                PaymentStatus = o.PaymentStatus.ToString(),
+                TotalAmount = o.TotalAmount,
+                ItemCount = o.Items.Sum(i => i.Quantity),
+                FirstItemName = firstItem?.ProductNameSnapshot ?? string.Empty,
+                FirstItemImage = firstItem?.ImageUrlSnapshot,
+                CreatedAt = o.CreatedAt
+            };
+        }).ToList();
     }
 }

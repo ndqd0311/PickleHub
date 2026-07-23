@@ -6,13 +6,10 @@ public class AddCartItemValidator : AbstractValidator<AddCartItemCommand>
 {
     public AddCartItemValidator()
     {
-        RuleFor(x => x.UserId)
-            .NotEmpty().WithMessage("UserId không được để trống.");
-
-        RuleFor(x => x.ProductId)
-            .NotEmpty().WithMessage("ProductId không được để trống.");
+        RuleFor(x => x.ProductVariantId)
+            .NotEmpty().WithMessage("Mã biến thể sản phẩm (ProductVariantId) không được để trống.");
 
         RuleFor(x => x.Quantity)
-            .GreaterThan(0).WithMessage("Số lượng sản phẩm thêm vào giỏ phải lớn hơn 0.");
+            .GreaterThanOrEqualTo(1).WithMessage("Số lượng sản phẩm phải lớn hơn hoặc bằng 1.");
     }
 }

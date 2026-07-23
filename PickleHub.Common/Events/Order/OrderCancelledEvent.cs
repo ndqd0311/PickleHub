@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using PickleHub.Common.Events.Order;
 
 namespace PickleHub.Common.Events.Orders;
 

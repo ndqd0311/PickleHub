@@ -5,6 +5,7 @@ using Microsoft.AspNetCore.Mvc;
 using PickleHub.CartOrder.Application.Features.Cart.AddItem;
 using PickleHub.CartOrder.Application.Features.Cart.DTOs;
 using PickleHub.CartOrder.Application.Features.Cart.GetCart;
+using PickleHub.CartOrder.Application.Features.Cart.MergeCart;
 using PickleHub.CartOrder.Application.Features.Cart.RemoveItem;
 using PickleHub.CartOrder.Application.Features.Cart.UpdateItem;
 
@@ -12,51 +13,58 @@ namespace PickleHub.CartOrder.Controllers;
 
 [ApiController]
 [Route("cart")]
-[Authorize]
 public class CartController(ISender mediator) : ControllerBase
 {
-    // GET /cart -> Lấy chi tiết giỏ hàng hiện tại
+    // GET /cart -> Xem giỏ hàng (Public hoặc Authenticated)
     [HttpGet]
-    public async Task<ActionResult<CartDto>> GetCart(CancellationToken ct)
+    public async Task<ActionResult<CartDto>> GetCart([FromQuery] string? sessionId, CancellationToken ct)
     {
-        var userId = GetUserId();
-        var result = await mediator.Send(new GetCartQuery(userId), ct);
+        var userId = TryGetUserId();
+        var result = await mediator.Send(new GetCartQuery(userId, sessionId), ct);
         return Ok(result);
     }
 
-    // POST /cart/items -> Thêm sản phẩm vào giỏ hàng
+    // POST /cart/items -> Thêm sản phẩm vào giỏ
     [HttpPost("items")]
-    public async Task<ActionResult<Guid>> AddItem(
+    public async Task<ActionResult<CartDto>> AddItem(
         [FromBody] AddCartItemRequest request, CancellationToken ct)
     {
-        var userId = GetUserId();
-        var result = await mediator.Send(new AddCartItemCommand(userId, request.ProductId, request.Quantity), ct);
+        var userId = TryGetUserId();
+        var result = await mediator.Send(new AddCartItemCommand(userId, request.ProductVariantId, request.Quantity, request.SessionId), ct);
         return Ok(result);
     }
 
-    // PUT /cart/items -> Cập nhật số lượng sản phẩm trong giỏ
-    [HttpPut("items")]
-    public async Task<ActionResult<Guid>> UpdateItem(
-        [FromBody] UpdateCartItemRequest request, CancellationToken ct)
+    // PUT /cart/items/{itemId} -> Cập nhật số lượng sản phẩm trong giỏ
+    [HttpPut("items/{itemId:guid}")]
+    public async Task<ActionResult<CartDto>> UpdateItem(
+        Guid itemId, [FromBody] UpdateCartItemRequest request, CancellationToken ct)
+    {
+        var userId = TryGetUserId();
+        var result = await mediator.Send(new UpdateCartItemCommand(userId, itemId, request.Quantity), ct);
+        return Ok(result);
+    }
+
+    // DELETE /cart/items/{itemId} -> Xóa 1 item khỏi giỏ
+    [HttpDelete("items/{itemId:guid}")]
+    public async Task<ActionResult<CartDto>> RemoveItem(Guid itemId, CancellationToken ct)
+    {
+        var userId = TryGetUserId();
+        var result = await mediator.Send(new RemoveCartItemCommand(userId, itemId), ct);
+        return Ok(result);
+    }
+
+    // POST /cart/merge -> Merge giỏ hàng Guest vào Account khi đăng nhập
+    [HttpPost("merge")]
+    [Authorize]
+    public async Task<ActionResult<CartDto>> MergeCart([FromBody] MergeCartRequest request, CancellationToken ct)
     {
         var userId = GetUserId();
-        var result = await mediator.Send(new UpdateCartItemCommand(userId, request.ProductId, request.Quantity), ct);
+        var result = await mediator.Send(new MergeCartCommand(userId, request.SessionId), ct);
         return Ok(result);
     }
-
-    // DELETE /cart/items/{productId} -> Xóa sản phẩm khỏi giỏ hàng
-    [HttpDelete("items/{productId:guid}")]
-    public async Task<ActionResult<Guid>> RemoveItem(
-        Guid productId, CancellationToken ct)
-    {
-        var userId = GetUserId();
-        var result = await mediator.Send(new RemoveCartItemCommand(userId, productId), ct);
-        return Ok(result);
-    }
-
+    
     private Guid GetUserId()
     {
-        // Trích xuất UserId trực tiếp từ JWT Claim "sub" (hoặc NameIdentifier)
         var userIdClaim = User.FindFirst(ClaimTypes.NameIdentifier)?.Value 
                           ?? User.FindFirst("sub")?.Value;
 
@@ -66,8 +74,20 @@ public class CartController(ISender mediator) : ControllerBase
         }
         return userId;
     }
+
+    private Guid? TryGetUserId()
+    {
+        var userIdClaim = User.FindFirst(ClaimTypes.NameIdentifier)?.Value 
+                          ?? User.FindFirst("sub")?.Value;
+
+        if (!string.IsNullOrEmpty(userIdClaim) && Guid.TryParse(userIdClaim, out var userId))
+        {
+            return userId;
+        }
+        return null;
+    }
 }
 
-// Request Models
-public record AddCartItemRequest(Guid ProductId, int Quantity);
-public record UpdateCartItemRequest(Guid ProductId, int Quantity);
+public record AddCartItemRequest(Guid ProductVariantId, int Quantity, string? SessionId = null);
+public record UpdateCartItemRequest(int Quantity);
+public record MergeCartRequest(string SessionId);

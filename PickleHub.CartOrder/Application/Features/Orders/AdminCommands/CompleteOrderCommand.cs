@@ -9,31 +9,37 @@ using PickleHub.CartOrder.Domain.Interfaces;
 using PickleHub.CartOrder.Infrastructure.Persistence;
 using PickleHub.Common.Events.Orders;
 
-namespace PickleHub.CartOrder.Application.Features.Orders.UpdateOrderStatusCommand;
+namespace PickleHub.CartOrder.Application.Features.Orders.AdminCommands;
 
-public record UpdateOrderStatusCommand(Guid OrderId, OrderStatus OrderStatus) : IRequest<string>;
+public record CompleteOrderCommand(Guid OrderId) : IRequest<bool>;
 
-public class UpdateOrderStatusCommandHandler(
+public class CompleteOrderCommandHandler(
     CartOrderDbContext db,
     ICustomerClient customerClient,
     IPublishEndpoint publishEndpoint
-) : IRequestHandler<UpdateOrderStatusCommand, string>
+) : IRequestHandler<CompleteOrderCommand, bool>
 {
-    public async Task<string> Handle(UpdateOrderStatusCommand request, CancellationToken ct)
+    public async Task<bool> Handle(CompleteOrderCommand request, CancellationToken ct)
     {
         var order = await db.Orders.FirstOrDefaultAsync(o => o.Id == request.OrderId, ct);
-        
         if (order is null)
         {
-            throw new KeyNotFoundException("Không tìm thấy đơn hàng.");
+            throw new KeyNotFoundException("Không tìm thấy đơn hàng yêu cầu.");
         }
 
-        var customer = await customerClient.GetCustomerDetailsAsync(order.CustomerId, ct);
+        if (order.Status != OrderStatus.Shipping)
+        {
+            throw new InvalidOperationException("Chỉ có thể xác nhận hoàn thành cho đơn hàng đang ở trạng thái 'Shipping'.");
+        }
+
         var oldStatus = order.Status;
-        order.Status = request.OrderStatus;
+        order.Status = OrderStatus.Completed;
+        order.PaymentStatus = PaymentStatus.Paid;
         order.UpdatedAt = DateTime.UtcNow;
 
         await db.SaveChangesAsync(ct);
+
+        var customer = await customerClient.GetCustomerDetailsAsync(order.CustomerId, ct);
 
         await publishEndpoint.Publish(new OrderStatusUpdatedEvent
         {
@@ -45,7 +51,7 @@ public class UpdateOrderStatusCommandHandler(
             NewStatus = order.Status.ToString(),
             UpdatedAt = DateTime.UtcNow
         }, ct);
-        
-        return order.Status.ToString();
+
+        return true;
     }
 }

@@ -1,3 +1,8 @@
+using System;
+using System.Collections.Generic;
+using System.Linq;
+using System.Threading;
+using System.Threading.Tasks;
 using MediatR;
 using Microsoft.EntityFrameworkCore;
 using PickleHub.CartOrder.Application.Features.Cart.DTOs;
@@ -6,50 +11,52 @@ using PickleHub.CartOrder.Infrastructure.Persistence;
 
 namespace PickleHub.CartOrder.Application.Features.Cart.GetCart;
 
-// Query lấy thông tin chi tiết giỏ hàng của User.
-public record GetCartQuery(Guid UserId) : IRequest<CartDto>;
+// Query xem chi tiết giỏ hàng (Hỗ trợ cả User đã đăng nhập và Guest qua SessionId).
+public record GetCartQuery(Guid? UserId, string? SessionId = null) : IRequest<CartDto>;
 
 public class GetCartHandler(CartOrderDbContext db, ICatalogClient catalogClient) : IRequestHandler<GetCartQuery, CartDto>
 {
     public async Task<CartDto> Handle(GetCartQuery request, CancellationToken ct)
     {
+        if (!request.UserId.HasValue && string.IsNullOrEmpty(request.SessionId))
+        {
+            return new CartDto();
+        }
+
         var cart = await db.Carts
             .Include(c => c.Items)
-            .FirstOrDefaultAsync(c => c.UserId == request.UserId, ct);
+            .FirstOrDefaultAsync(c => 
+                (request.UserId.HasValue && c.UserId == request.UserId.Value) || 
+                (!string.IsNullOrEmpty(request.SessionId) && c.SessionId == request.SessionId), ct);
 
         if (cart is null)
         {
-            return new CartDto
-            {
-                CartId = Guid.Empty,
-                Items = new List<CartItemDto>()
-            };
+            return new CartDto();
         }
 
         var cartItemDtos = new List<CartItemDto>();
 
         foreach (var item in cart.Items)
         {
-            // Gọi Catalog Service để lấy chi tiết sản phẩm
+            // Gọi Catalog Service để lấy chi tiết tươi mới
             var productDetails = await catalogClient.GetProductDetailsAsync(item.ProductId, ct);
-            if (productDetails is null) continue;
+            
+            var variant = productDetails?.Variants.FirstOrDefault(v => v.Id == item.ProductVariantId || v.Id == item.ProductId);
+            var unitPrice = variant?.Price ?? productDetails?.BasePrice ?? item.UnitPrice;
 
-            // Lấy giá của biến thể cụ thể, nếu không có thì dùng BasePrice làm giá trị mặc định
-            var variant = productDetails.Variants.FirstOrDefault(v => v.Id == item.ProductId);
-            var unitPrice = variant?.Price ?? productDetails.BasePrice;
-
-            // Lấy ảnh thumbnail chính (sortOrder nhỏ nhất, không phải Size Chart)
-            var imageUrl = productDetails.Images
+            var imageUrl = productDetails?.Images
                 .Where(img => !img.IsSizeChart)
                 .OrderBy(img => img.SortOrder)
-                .FirstOrDefault()?.Url ?? string.Empty;
+                .FirstOrDefault()?.Url ?? item.ImageUrlSnapshot;
 
             cartItemDtos.Add(new CartItemDto
             {
-                CartItemId = item.Id,
+                Id = item.Id,
+                ProductVariantId = item.ProductVariantId != Guid.Empty ? item.ProductVariantId : item.ProductId,
                 ProductId = item.ProductId,
-                ProductName = productDetails.Name,
-                ImageUrl = imageUrl,
+                ProductNameSnapshot = !string.IsNullOrEmpty(item.ProductNameSnapshot) ? item.ProductNameSnapshot : (productDetails?.Name ?? string.Empty),
+                VariantAttributesSnapshot = item.VariantAttributesSnapshot,
+                ImageUrlSnapshot = imageUrl,
                 UnitPrice = unitPrice,
                 Quantity = item.Quantity
             });
@@ -57,7 +64,6 @@ public class GetCartHandler(CartOrderDbContext db, ICatalogClient catalogClient)
         
         return new CartDto
         {
-            CartId = cart.Id,
             Items = cartItemDtos
         };
     }

@@ -1,11 +1,6 @@
-using System;
-using System.Collections.Generic;
+namespace PickleHub.Common.Events.Order;
 
-namespace PickleHub.Common.Events.Orders;
-
-/// <summary>
-/// Event phát ra khi một đơn hàng được đặt thành công (Checkout).
-/// </summary>
+//Event phát ra khi một đơn hàng được đặt thành công (Checkout).
 public record OrderCreatedEvent
 {
     public Guid OrderId { get; init; }

@@ -1,14 +1,22 @@
+using System;
+using System.Threading.Tasks;
 using MassTransit;
 using Microsoft.EntityFrameworkCore;
 using PickleHub.CartOrder.Domain.Enums;
+using PickleHub.CartOrder.Domain.Interfaces;
 using PickleHub.CartOrder.Infrastructure.Persistence;
+using PickleHub.Common.Events.Orders;
 using PickleHub.Common.Events.Payments;
 
 namespace PickleHub.CartOrder.Infrastructure.Consumers;
 
 // Lắng nghe sự kiện PaymentCompletedEvent từ RabbitMQ.
-// Khi thanh toán thành công -> Chuyển trạng thái đơn hàng sang Confirmed (Đã xác nhận).
-public class PaymentCompletedConsumer(CartOrderDbContext db) : IConsumer<PaymentCompletedEvent>
+// Khi thanh toán PayOS thành công -> Cập nhật PaymentStatus = Paid & Status = Confirmed (nếu đủ kho).
+public class PaymentCompletedConsumer(
+    CartOrderDbContext db,
+    ICustomerClient customerClient,
+    IPublishEndpoint publishEndpoint
+) : IConsumer<PaymentCompletedEvent>
 {
     public async Task Consume(ConsumeContext<PaymentCompletedEvent> context)
     {
@@ -16,23 +24,42 @@ public class PaymentCompletedConsumer(CartOrderDbContext db) : IConsumer<Payment
 
         // 1. Tìm đơn hàng tương ứng trong DB của CartOrder Service
         var order = await db.Orders
+            .Include(o => o.Items)
             .FirstOrDefaultAsync(o => o.Id == message.OrderId);
 
-        if (order is null)
-        {
-            throw new Exception("Không thấy đơn hàng");
-        }
-
-        // 2. Kiểm tra nếu đơn hàng đã được xử lý rồi (tránh xử lý trùng lặp)
-        if (order.Status != OrderStatus.Pending)
+        if (order is null || order.PaymentStatus == PaymentStatus.Paid)
         {
             return;
         }
 
-        // 3. Cập nhật trạng thái đơn hàng thành Confirmed (Đã thanh toán)
-        order.Status = OrderStatus.Confirmed;
+        order.PaymentStatus = PaymentStatus.Paid;
+        var oldStatus = order.Status;
 
-        // 4. Lưu thay đổi vào Database của CartOrder Service
+        // 2. Nếu đơn hàng lúc Checkout đã được giữ chỗ tồn kho thành công -> Tự động chuyển Confirmed
+        // Nếu lúc Checkout thiếu hàng (IsStockReserved = false) -> Giữ Pending để Admin xem xét duyệt thủ công
+        if (order.IsStockReserved && order.Status == OrderStatus.Pending)
+        {
+            order.Status = OrderStatus.Confirmed;
+        }
+
+        order.UpdatedAt = DateTime.UtcNow;
         await db.SaveChangesAsync();
+
+        // 4. Nếu chuyển sang Confirmed -> Publish OrderStatusUpdatedEvent để gửi email xác nhận đã thanh toán & xác nhận đơn
+        if (order.Status == OrderStatus.Confirmed)
+        {
+            var customer = await customerClient.GetCustomerDetailsAsync(order.CustomerId);
+
+            await publishEndpoint.Publish(new OrderStatusUpdatedEvent
+            {
+                OrderId = order.Id,
+                CustomerId = order.CustomerId,
+                CustomerName = customer?.FullName ?? order.ShippingFullName,
+                CustomerEmail = customer?.Email ?? string.Empty,
+                OldStatus = oldStatus.ToString(),
+                NewStatus = order.Status.ToString(),
+                UpdatedAt = DateTime.UtcNow
+            });
+        }
     }
 }
