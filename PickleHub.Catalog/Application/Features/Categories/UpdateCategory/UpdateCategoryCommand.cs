@@ -1,8 +1,8 @@
 ﻿using MediatR;
-using Microsoft.EntityFrameworkCore;
 using PickleHub.Catalog.Application.Features.Categories.DTOs;
-using PickleHub.Catalog.Infrastructure.Persistence;
+using PickleHub.Catalog.Domain.Repositories;
 using PickleHub.Common.Exceptions;
+using PickleHub.Common.ValueObjects;
 
 namespace PickleHub.Catalog.Application.Features.Categories.UpdateCategory
 {
@@ -10,29 +10,45 @@ namespace PickleHub.Catalog.Application.Features.Categories.UpdateCategory
 
     public class UpdateCategoryHandler : IRequestHandler<UpdateCategoryCommand, CategoryTreeDto>
     {
-        private readonly CatalogDbContext _db;
+        private readonly ICategoryRepository _categoryRepository;
+        private readonly IUnitOfWork _unitOfWork;
 
-        public UpdateCategoryHandler(CatalogDbContext db)
+        public UpdateCategoryHandler(ICategoryRepository categoryRepository, IUnitOfWork unitOfWork)
         {
-            _db = db;
+            _categoryRepository = categoryRepository;
+            _unitOfWork = unitOfWork;
         }
 
         public async Task<CategoryTreeDto> Handle(UpdateCategoryCommand request, CancellationToken ct)
         {
-            var category = await _db.Categories.FirstOrDefaultAsync(c => c.Id == request.Id, ct);
+            var category = await _categoryRepository.GetByIdAsync(request.Id, ct)
+                ?? throw new NotFoundException("Danh mục không tồn tại.");
 
-            if (category == null)
+            var slug = await GenerateUniqueSlugAsync(request.Name, request.Id, ct);
+            category.Update(request.Name, slug, request.ParentId);
+
+            _categoryRepository.Update(category);
+            await _unitOfWork.SaveChangesAsync(ct);
+
+            return new CategoryTreeDto
             {
-                throw new NotFoundException( "Danh mục không tồn tại.");
-            }
+                Id = category.Id,
+                Name = category.Name,
+                Slug = category.Slug.Value,
+                ParentId = category.ParentId
+            };
+        }
 
-            category.Name = request.Name;
-            category.ParentId = request.ParentId;
-            category.UpdatedAt = DateTime.UtcNow;
+        private async Task<Slug> GenerateUniqueSlugAsync(string name, Guid? excludeId, CancellationToken ct)
+        {
+            var baseSlug = Slug.Create(name);
+            var candidate = baseSlug;
+            var counter = 1;
 
-            await _db.SaveChangesAsync(ct);
+            while (await _categoryRepository.ExistsBySlugAsync(candidate.Value, excludeId, ct))
+                candidate = baseSlug.AppendSuffix(counter++);
 
-            return new CategoryTreeDto { Id = category.Id, Name = category.Name, ParentId = category.ParentId };
+            return candidate;
         }
     }
 }

@@ -1,7 +1,6 @@
 ﻿using MediatR;
-using Microsoft.EntityFrameworkCore;
 using PickleHub.Catalog.Application.Features.Categories.DTOs;
-using PickleHub.Catalog.Infrastructure.Persistence;
+using PickleHub.Catalog.Domain.Repositories;
 
 namespace PickleHub.Catalog.Application.Features.Categories.GetCategory
 {
@@ -9,46 +8,43 @@ namespace PickleHub.Catalog.Application.Features.Categories.GetCategory
 
     public class GetCategoriesHandler : IRequestHandler<GetCategoriesQuery, List<CategoryTreeDto>>
     {
-        private readonly CatalogDbContext _db;
-
-        public GetCategoriesHandler(CatalogDbContext db)
+        private readonly ICategoryRepository _categoryRepository;
+        public GetCategoriesHandler(ICategoryRepository categoryRepository)
         {
-            _db = db;
+            _categoryRepository = categoryRepository;
         }
-
         public async Task<List<CategoryTreeDto>> Handle(GetCategoriesQuery request, CancellationToken ct)
         {
-            var categories = await _db.Categories.AsNoTracking().ToListAsync(ct);
+            var categories = await _categoryRepository.GetAllAsync(ct);
 
-            var dtos = categories.Select(c => new CategoryTreeDto
+            var dtos = categories.Select(c=> new CategoryTreeDto
             {
                 Id = c.Id,
                 Name = c.Name,
-                ParentId = c.ParentId
+                Slug = c.Slug.Value,
+                ParentId = c.ParentId,
+                Children = new List<CategoryTreeDto>()
             }).ToList();
 
-            if (request.Flat)
+            if(request.Flat)
             {
                 return dtos;
             }
 
             var lookup = dtos.ToDictionary(d => d.Id);
             var roots = new List<CategoryTreeDto>();
-
-            foreach (var dto in dtos)
+            foreach (var d in dtos) 
             {
-                if (dto.ParentId.HasValue && lookup.TryGetValue(dto.ParentId.Value, out var parent))
+                if (d.ParentId.HasValue && lookup.TryGetValue(d.ParentId.Value, out var parent))
                 {
-                    parent.Children.Add(dto);
+                    parent.Children.Add(d);
                 }
                 else
                 {
-                    roots.Add(dto);
+                    roots.Add(d);
                 }
             }
-
             return roots;
-
         }
     }
 }

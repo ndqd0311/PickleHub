@@ -1,28 +1,26 @@
 ﻿using MediatR;
-using Microsoft.EntityFrameworkCore;
 using PickleHub.Catalog.Application.Features.Brands.DTOs;
-using PickleHub.Catalog.Infrastructure.Persistence;
+using PickleHub.Catalog.Domain.Repositories;
 
 namespace PickleHub.Catalog.Application.Features.Brands.GetBrand
 {
-    public record GetBrandsQuery() : IRequest<List<BrandDto>>;
+    public record GetBrandsQuery : IRequest<List<BrandDto>>;
 
     public class GetBrandsHandler : IRequestHandler<GetBrandsQuery, List<BrandDto>>
     {
-        private readonly CatalogDbContext _db;
-
-        public GetBrandsHandler(CatalogDbContext db)
+        private readonly IBrandRepository _brandRepository;
+        public GetBrandsHandler(IBrandRepository brandRepository)
         {
-            _db = db;
+            _brandRepository = brandRepository;
         }
-
         public async Task<List<BrandDto>> Handle(GetBrandsQuery request, CancellationToken ct)
         {
-            return await _db.Brands
-                .AsNoTracking()
-                .Select(b => new BrandDto { Id = b.Id, Name = b.Name })
-                .ToListAsync(ct);
+            var brands = await _brandRepository.GetAllAsync(ct);
+            return brands.Select(b => new BrandDto
+            { 
+                Id = b.Id,
+                Name = b.Name, 
+            }).ToList();
         }
     }
-
 }

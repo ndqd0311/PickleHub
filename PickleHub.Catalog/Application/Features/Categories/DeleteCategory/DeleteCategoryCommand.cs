@@ -1,6 +1,5 @@
 ﻿using MediatR;
-using Microsoft.EntityFrameworkCore;
-using PickleHub.Catalog.Infrastructure.Persistence;
+using PickleHub.Catalog.Domain.Repositories;
 using PickleHub.Common.Exceptions;
 
 namespace PickleHub.Catalog.Application.Features.Categories.DeleteCategory
@@ -9,32 +8,26 @@ namespace PickleHub.Catalog.Application.Features.Categories.DeleteCategory
 
     public class DeleteCategoryHandler : IRequestHandler<DeleteCategoryCommand>
     {
-        private readonly CatalogDbContext _db;
+        private readonly ICategoryRepository _categoryRepository;
+        private readonly IUnitOfWork _unitOfWork;
 
-        public DeleteCategoryHandler(CatalogDbContext db)
+        public DeleteCategoryHandler(ICategoryRepository categoryRepository, IUnitOfWork unitOfWork)
         {
-            _db = db;
+            _categoryRepository = categoryRepository;
+            _unitOfWork = unitOfWork;
         }
 
         public async Task Handle(DeleteCategoryCommand request, CancellationToken ct)
         {
-            var category = await _db.Categories.FirstOrDefaultAsync(c => c.Id == request.Id, ct);
+            var category = await _categoryRepository.GetByIdAsync(request.Id, ct)
+                ?? throw new NotFoundException("Danh mục không tồn tại.");
 
-            if (category == null)
-            {
-                throw new NotFoundException( "Danh mục không tồn tại.");
-            }
+            if (await _categoryRepository.HasChildrenAsync(request.Id, ct)
+                || await _categoryRepository.HasProductsAsync(request.Id, ct))
+                throw new ConflictException("Danh mục vẫn còn sản phẩm hoặc danh mục con, không thể xóa.");
 
-            var hasChildren = await _db.Categories.AnyAsync(c => c.ParentId == request.Id, ct);
-            var hasProducts = await _db.Products.AnyAsync(p => p.CategoryId == request.Id, ct);
-
-            if (hasChildren || hasProducts)
-            {
-                throw new ConflictException( "Danh mục vẫn còn sản phẩm hoặc danh mục con. Không thể xóa");
-            }
-
-            _db.Categories.Remove(category);
-            await _db.SaveChangesAsync(ct);
+            _categoryRepository.Remove(category);
+            await _unitOfWork.SaveChangesAsync(ct);
         }
     }
 }

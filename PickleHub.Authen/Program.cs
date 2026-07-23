@@ -1,52 +1,22 @@
-using MediatR;
-using Microsoft.EntityFrameworkCore;
-using PickleHub.Authen.Domain.Entities;
-using PickleHub.Authen.Domain.Enums;
-using PickleHub.Authen.Infrastructure.Persistence;
-using PickleHub.Authen.Infrastructure.Service;
-using PickleHub.Authen.Infrastructure.Service;
+using PickleHub.Authen.Extensions;
 using PickleHub.Authen.Middleware;
-using Resend;
-
 
 var builder = WebApplication.CreateBuilder(args);
 
-builder.Services.AddDbContext<AuthenDbContext>(options =>
-    options.UseNpgsql(builder.Configuration.GetConnectionString("AuthenDb")));
-
-builder.Services.AddMediatR(cfg =>
-    cfg.RegisterServicesFromAssembly(typeof(Program).Assembly));
-
-builder.Services.AddSingleton<JwtTokenService>();
-builder.Services.AddResend(options =>
-    options.ApiToken = builder.Configuration["Resend:ApiKey"]!);
-builder.Services.AddScoped<IEmailService, ResendEmailService>();
-
-builder.Services.AddControllers();
-builder.Services.AddEndpointsApiExplorer();
-builder.Services.AddSwaggerGen();
+builder.Services
+    .AddDatabase(builder.Configuration)
+    .AddMediator()
+    .AddRepositories()
+    .AddInfrastructureServices(builder.Configuration)
+    .AddJwtAuthentication(builder.Configuration)
+    .AddCorsPolicy(builder.Configuration)
+    .AddMessageBus(builder.Configuration)
+    .AddSwaggerWithJwt()
+    .AddControllers();
 
 var app = builder.Build();
-using (var scope = app.Services.CreateScope())
-{
-    var db = scope.ServiceProvider.GetRequiredService<AuthenDbContext>();
-    var hasAdmin = await db.Users.AnyAsync(u => u.Role == UserRole.Admin);
 
-    if (!hasAdmin)
-    {
-        var adminEmail = builder.Configuration["SeedAdmin:Email"]!;
-        var adminPassword = builder.Configuration["SeedAdmin:Password"]!;
-
-        db.Users.Add(new User
-        {
-            Email = adminEmail,
-            PasswordHash = BCrypt.Net.BCrypt.HashPassword(adminPassword),
-            Role = UserRole.Admin
-        });
-
-        await db.SaveChangesAsync();
-    }
-}
+await app.SeedAdminAsync();
 
 if (app.Environment.IsDevelopment())
 {
@@ -55,6 +25,8 @@ if (app.Environment.IsDevelopment())
 }
 
 app.UseMiddleware<ExceptionHandlingMiddleware>();
+app.UseCors();
+app.UseAuthentication();
 app.UseAuthorization();
 app.MapControllers();
 

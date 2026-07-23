@@ -1,7 +1,8 @@
 ﻿using MediatR;
 using PickleHub.Catalog.Application.Features.Categories.DTOs;
 using PickleHub.Catalog.Domain.Entities;
-using PickleHub.Catalog.Infrastructure.Persistence;
+using PickleHub.Catalog.Domain.Repositories;
+using PickleHub.Common.ValueObjects;
 
 namespace PickleHub.Catalog.Application.Features.Categories.CreateCategory
 {
@@ -9,25 +10,39 @@ namespace PickleHub.Catalog.Application.Features.Categories.CreateCategory
 
     public class CreateCategoryHandler : IRequestHandler<CreateCategoryCommand, CategoryTreeDto>
     {
-        private readonly CatalogDbContext _db;
-
-        public CreateCategoryHandler(CatalogDbContext db)
+        private readonly ICategoryRepository _categoryRepository;
+        private readonly IUnitOfWork _unitOfWork;
+        public CreateCategoryHandler(ICategoryRepository categoryRepository, IUnitOfWork unitOfWork)
         {
-            _db = db;
+            _categoryRepository = categoryRepository;
+            _unitOfWork = unitOfWork;
         }
-
         public async Task<CategoryTreeDto> Handle(CreateCategoryCommand request, CancellationToken ct)
         {
-            var category = new Category
+            var slug = await GenerateUniqueSlugAsync(request.Name,null, ct);
+            var category = Category.Create(request.Name, slug, request.ParentId);
+
+            _categoryRepository.Add(category);
+            await _unitOfWork.SaveChangesAsync(ct);
+            return new CategoryTreeDto
             {
-                Name = request.Name,
-                ParentId = request.ParentId
+                Id = category.Id,
+                Name = category.Name,
+                Slug = category.Slug.Value,
+                ParentId = category.ParentId,
             };
+        }
 
-            _db.Categories.Add(category);
-            await _db.SaveChangesAsync(ct);
+        private async Task<Slug> GenerateUniqueSlugAsync(string name, Guid? excludeId, CancellationToken ct)
+        {
+            var baseSlug = Slug.Create(name);
+            var candidate = baseSlug;
+            var counter = 1;
 
-            return new CategoryTreeDto { Id = category.Id, Name = category.Name, ParentId = category.ParentId };
+            while (await _categoryRepository.ExistsBySlugAsync(candidate.Value, excludeId, ct))
+                candidate = baseSlug.AppendSuffix(counter++);
+
+            return candidate;
         }
     }
 }

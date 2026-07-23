@@ -1,10 +1,13 @@
-﻿using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using PickleHub.Catalog.Domain;
 using PickleHub.Catalog.Domain.Entities;
+using PickleHub.Catalog.Domain.Repositories;
+using PickleHub.Common.ValueObjects;
 
 namespace PickleHub.Catalog.Infrastructure.Persistence;
 
-public class CatalogDbContext : DbContext
+public class CatalogDbContext : DbContext, IUnitOfWork
 {
     public CatalogDbContext(DbContextOptions<CatalogDbContext> options) : base(options) { }
 
@@ -16,11 +19,22 @@ public class CatalogDbContext : DbContext
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
+        var slugConverter = new ValueConverter<Slug, string>(
+            slug => slug.Value,
+            value => Slug.FromPersistedValue(value)
+        );
+
         modelBuilder.Entity<Category>(e =>
         {
             e.ToTable("category");
             e.HasKey(c => c.Id);
+            e.Property(c => c.Id).ValueGeneratedNever();
             e.Property(c => c.Name).IsRequired().HasMaxLength(200);
+            e.Property(c => c.Slug)
+                .HasConversion(slugConverter)
+                .HasMaxLength(300)
+                .HasColumnName("slug");
+            e.HasIndex(c => c.Slug).IsUnique();
             e.Property(c => c.CreatedAt).HasColumnName("created_at");
             e.Property(c => c.UpdatedAt).HasColumnName("updated_at");
             e.HasMany(c => c.Children)
@@ -33,21 +47,29 @@ public class CatalogDbContext : DbContext
         {
             e.ToTable("brand");
             e.HasKey(b => b.Id);
+            e.Property(b => b.Id).ValueGeneratedNever();
             e.Property(b => b.Name).IsRequired().HasMaxLength(200);
-            e.Property(c => c.CreatedAt).HasColumnName("created_at");
-            e.Property(c => c.UpdatedAt).HasColumnName("updated_at");
+            e.Property(b => b.CreatedAt).HasColumnName("created_at");
+            e.Property(b => b.UpdatedAt).HasColumnName("updated_at");
         });
 
         modelBuilder.Entity<Product>(e =>
         {
             e.ToTable("product");
             e.HasKey(p => p.Id);
+            e.Property(p => p.Id).ValueGeneratedNever();
             e.Property(p => p.Name).IsRequired().HasMaxLength(300);
+            e.Property(p => p.Slug)
+                .HasConversion(slugConverter)
+                .HasMaxLength(300)
+                .HasColumnName("slug");
+            e.HasIndex(p => p.Slug).IsUnique();
             e.Property(p => p.BasePrice).HasColumnType("decimal(12,2)");
             e.Property(p => p.Status).HasConversion<string>().HasMaxLength(20);
             e.Property(p => p.SpecsJson).HasColumnName("specs").HasColumnType("jsonb");
-            e.Property(c => c.CreatedAt).HasColumnName("created_at");
-            e.Property(c => c.UpdatedAt).HasColumnName("updated_at");
+            e.Property(p => p.SoldCount).HasColumnName("sold_count").HasDefaultValue(0);
+            e.Property(p => p.CreatedAt).HasColumnName("created_at");
+            e.Property(p => p.UpdatedAt).HasColumnName("updated_at");
 
             e.HasOne(p => p.Category)
                 .WithMany()
@@ -58,37 +80,44 @@ public class CatalogDbContext : DbContext
                 .WithMany()
                 .HasForeignKey(p => p.BrandId)
                 .OnDelete(DeleteBehavior.Restrict);
+
+            e.HasMany(p => p.Images)
+                .WithOne(i => i.Product)
+                .HasForeignKey(i => i.ProductId)
+                .OnDelete(DeleteBehavior.Cascade);
+
+            e.HasMany(p => p.Variants)
+                .WithOne(v => v.Product)
+                .HasForeignKey(v => v.ProductId)
+                .OnDelete(DeleteBehavior.Cascade);
+
+            e.Navigation(p => p.Images).HasField("_images");
+            e.Navigation(p => p.Variants).HasField("_variants");
         });
 
         modelBuilder.Entity<ProductVariant>(e =>
         {
             e.ToTable("product_variant");
             e.HasKey(v => v.Id);
+            e.Property(v => v.Id).ValueGeneratedNever();
             e.Property(v => v.Sku).IsRequired().HasMaxLength(100);
             e.HasIndex(v => v.Sku).IsUnique();
             e.Property(v => v.AttributesJson).HasColumnName("attributes").HasColumnType("jsonb");
             e.Property(v => v.Price).HasColumnType("decimal(12,2)");
-            e.Property(c => c.CreatedAt).HasColumnName("created_at");
-            e.Property(c => c.UpdatedAt).HasColumnName("updated_at");
-
-            e.HasOne(v => v.Product)
-                .WithMany(p => p.Variants)
-                .HasForeignKey(v => v.ProductId)
-                .OnDelete(DeleteBehavior.Cascade);
+            e.Property(v => v.CreatedAt).HasColumnName("created_at");
+            e.Property(v => v.UpdatedAt).HasColumnName("updated_at");
         });
 
         modelBuilder.Entity<ProductImage>(e =>
         {
             e.ToTable("product_image");
             e.HasKey(i => i.Id);
+            e.Property(i => i.Id).ValueGeneratedNever();
+            e.Property(i => i.PublicId).IsRequired().HasColumnName("public_id").HasMaxLength(500);
             e.Property(i => i.Url).IsRequired();
-            e.Property(c => c.CreatedAt).HasColumnName("created_at");
-            e.Property(c => c.UpdatedAt).HasColumnName("updated_at");
-
-            e.HasOne(i => i.Product)
-                .WithMany(p => p.Images)
-                .HasForeignKey(i => i.ProductId)
-                .OnDelete(DeleteBehavior.Cascade);
+            e.Property(i => i.IsSizeChart).HasColumnName("is_size_chart").HasDefaultValue(false);
+            e.Property(i => i.CreatedAt).HasColumnName("created_at");
+            e.Property(i => i.UpdatedAt).HasColumnName("updated_at");
         });
     }
 }

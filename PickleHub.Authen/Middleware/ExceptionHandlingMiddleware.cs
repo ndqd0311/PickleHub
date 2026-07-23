@@ -28,6 +28,7 @@ namespace PickleHub.Authen.Middleware
                     ConflictException cf => (HttpStatusCode.Conflict, cf.Message, (Dictionary<string, string[]>?)null),
                     ForbiddenException fb => (HttpStatusCode.Forbidden, fb.Message, (Dictionary<string, string[]>?)null),
                     UnauthorizedException ua => (HttpStatusCode.Unauthorized, ua.Message, (Dictionary<string, string[]>?)null),
+                    DomainException de => (HttpStatusCode.BadRequest, de.Message, (Dictionary<string, string[]>?)null),
                     //ValidationException vl => (HttpStatusCode.BadRequest, vl.Message,
                     //    vl.Errors.Count > 0 ? (object?)vl.Errors : null),
                     FluentValidation.ValidationException vl => (

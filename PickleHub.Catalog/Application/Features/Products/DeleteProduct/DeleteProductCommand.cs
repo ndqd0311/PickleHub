@@ -1,7 +1,5 @@
-﻿using MediatR;
-using Microsoft.EntityFrameworkCore;
-using PickleHub.Catalog.Domain.Enums;
-using PickleHub.Catalog.Infrastructure.Persistence;
+using MediatR;
+using PickleHub.Catalog.Domain.Repositories;
 using PickleHub.Common.Exceptions;
 
 namespace PickleHub.Catalog.Application.Features.Products.DeleteProduct
@@ -10,25 +8,24 @@ namespace PickleHub.Catalog.Application.Features.Products.DeleteProduct
 
     public class DeleteProductHandler : IRequestHandler<DeleteProductCommand>
     {
-        private readonly CatalogDbContext _db;
+        private readonly IProductRepository _productRepository;
+        private readonly IUnitOfWork _unitOfWork;
 
-        public DeleteProductHandler(CatalogDbContext db)
+        public DeleteProductHandler(IProductRepository productRepository, IUnitOfWork unitOfWork)
         {
-            _db = db;
+            _productRepository = productRepository;
+            _unitOfWork = unitOfWork;
         }
 
         public async Task Handle(DeleteProductCommand request, CancellationToken ct)
         {
-            var product = await _db.Products.FirstOrDefaultAsync(p => p.Id == request.Id, ct);
+            var product = await _productRepository.GetByIdAsync(request.Id, ct)
+                ?? throw new NotFoundException("Sản phẩm không tồn tại.");
 
-            if (product == null)
-            {
-                throw new NotFoundException("Sản phẩm không tồn tại.");
-            }
+            product.Hide();
 
-            product.Status = ProductStatus.Hidden;
-            product.UpdatedAt = DateTime.UtcNow;
-            await _db.SaveChangesAsync(ct);
+            await _unitOfWork.SaveChangesAsync(ct);
+           
         }
     }
 }

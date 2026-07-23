@@ -1,6 +1,5 @@
 ﻿using MediatR;
 using Microsoft.AspNetCore.Authorization;
-using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
 using PickleHub.Catalog.Application.Features.Brands.CreateBrand;
 using PickleHub.Catalog.Application.Features.Brands.DeleteBrand;
@@ -14,9 +13,9 @@ namespace PickleHub.Catalog.Controllers
     public class BrandsController(ISender mediator) : ControllerBase
     {
         [HttpGet]
-        public async Task<IActionResult> GetAll([FromQuery] GetBrandsQuery query, CancellationToken ct)
+        public async Task<IActionResult> GetAll()
         {
-            var result = await mediator.Send(query, ct);
+            var result = await mediator.Send(new GetBrandsQuery());
             return Ok(result);
         }
 
@@ -28,11 +27,12 @@ namespace PickleHub.Catalog.Controllers
             return CreatedAtAction(nameof(GetAll), result);
         }
 
+
         [HttpPut("{id:guid}")]
         [Authorize(Roles = "Admin")]
         public async Task<IActionResult> Update(Guid id, [FromBody] UpdateBrandCommand command, CancellationToken ct)
         {
-            var result = await mediator.Send(command with {Id = id}, ct);
+            var result = await mediator.Send(command with { Id = id }, ct);
             return Ok(result);
         }
 
@@ -42,6 +42,7 @@ namespace PickleHub.Catalog.Controllers
         {
             await mediator.Send(new DeleteBrandCommand(id), ct);
             return NoContent();
+
         }
     }
 }
