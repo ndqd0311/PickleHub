@@ -19,19 +19,6 @@ public class HandleWebhookCommandHandler(
     PayOSClient payOsClient,
     IPublishEndpoint publishEndpoint) : IRequestHandler<HandleWebhookCommand, bool>
 {
-    // 2. Tạo Constructor để Inject các dependencies này vào handler.
-    // 3. Trong hàm Handle:
-    //    - B1: Xác thực Signature của webhook bằng:
-    //          var verifiedData = await payOSClient.Webhooks.VerifyAsync(request.WebhookBody);
-    //    - B2: Tìm giao dịch trong DB khớp với verifiedData.OrderCode.
-    //    - B3: Nếu không tìm thấy, trả về false hoặc ném KeyNotFoundException.
-    //    - B4: Nếu trạng thái giao dịch đã xử lý rồi (!= Processing) -> Trả về true (Idempotent).
-    //    - B5: Cập nhật trạng thái giao dịch:
-    //          + Nếu verifiedData.Code == "00" (Thành công): Cập nhật Succeeded, publish PaymentCompletedEvent.
-    //          + Nếu ngược lại: Cập nhật Failed, publish PaymentFailedEvent.
-    //    - B6: Lưu thay đổi vào DB: await db.SaveChangesAsync(ct);
-    //    - B7: Trả về true.
-
     public async Task<bool> Handle(HandleWebhookCommand request, CancellationToken ct)
     {
         try
@@ -44,14 +31,15 @@ public class HandleWebhookCommandHandler(
                 throw new KeyNotFoundException("Không tìm thấy giao dịch");
             }
 
-            if (payment.Status != PaymentStatus.Processing)
+            if (payment.Status != PaymentStatus.Unpaid)
             {
                 return true;
             }
 
             if (verifiedData.Code == "00")
             {
-                payment.Status = PaymentStatus.Succeeded;
+                payment.Status = PaymentStatus.Paid;
+                payment.PaidAt = DateTime.UtcNow;
 
                 await publishEndpoint.Publish(new PaymentCompletedEvent
                 {
@@ -65,6 +53,7 @@ public class HandleWebhookCommandHandler(
             else
             {
                 payment.Status = PaymentStatus.Failed;
+                payment.PaidAt = null;
 
                 await publishEndpoint.Publish(new PaymentFailedEvent
                 {
